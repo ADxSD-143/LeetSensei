@@ -1,0 +1,8 @@
+# Normalise line endings so Windows, macOS and Linux checkouts are byte-identical
+# and `prettier --check` behaves the same everywhere.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.zip binary
+*.ico binary

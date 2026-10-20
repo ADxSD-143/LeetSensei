@@ -19,6 +19,7 @@ Dashboard <-> Revision engine <-> Local storage
 ```
 
 ## Module boundaries
+
 - **Adapter:** understands LeetCode page/submission behavior, not GitHub writes.
 - **Normalizer:** validates input and creates a deterministic record without network writes.
 - **Planner:** emits a deterministic list of intended file changes.
