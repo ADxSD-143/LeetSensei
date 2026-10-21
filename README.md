@@ -6,7 +6,7 @@ Built with zero runtime dependencies, no telemetry, and no required paid service
 
 > **Status: early MVP, working and tested, not yet published to any browser store.**
 > The sync engine, revision tracker, conflict handling and GitHub integration are
-> implemented and covered by 403 automated tests. See
+> implemented and covered by 407 automated tests. See
 > [Feature status](#feature-status) for exactly what is verified and what is not.
 
 ## What it does
@@ -39,33 +39,42 @@ happens twice: once against the page verdict and again against the submission re
 
 ## Feature status
 
-| Area                                     | Status                  | Notes                                                                                                          |
-| ---------------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Accepted-only gate                       | **Implemented, tested** | Single validator; every non-Accepted status has a test                                                         |
-| Language coverage                        | **Implemented, tested** | ~40 LeetCode languages; unknown languages are reported, never guessed                                          |
-| Topic-tag → folder mapping               | **Implemented, tested** | `Hash Table` → `Hash-Table`, Unicode-safe, collision-safe, reserved-name-safe                                  |
-| Problem README                           | **Implemented, tested** | Pre-filled template; your approach, complexity and notes survive every sync                                    |
-| Multi-language solutions                 | **Implemented, tested** | One file per language, accumulated across submissions                                                          |
-| Manifest + hashing                       | **Implemented, tested** | Versioned schema with migration, per-file sha256 and Git blob ids                                              |
-| Conflict protection                      | **Implemented, tested** | Replace / Save version / Cancel; compare-by-blob-id before writing                                             |
-| Grouped commits                          | **Implemented, tested** | One submission → one commit via the Git data API; never `force`                                                |
-| Idempotent retries                       | **Implemented, tested** | Content-addressed blobs; a repeated event creates no duplicate files                                           |
-| Rate limits / offline / expiry           | **Implemented, tested** | Bounded backoff, `retry-after`, retryable vs terminal error taxonomy                                           |
-| Revision scheduler                       | **Implemented, tested** | Ladder 1/3/7/14/30 days; Easy advances, Hard holds, Again resets                                               |
-| Revision backup + restore                | **Implemented, tested** | Backed up to `.leetcode-tracker/revisions.json`, restorable on a new device                                    |
-| Popup / dashboard / options              | **Implemented**         | Loading, empty, error, conflict and partial states; keyboard accessible                                        |
-| LeetCode GraphQL queries                 | **Live-verified**       | Confirmed against `leetcode.com/graphql`, from a plain client and from a real browser page                     |
-| LeetCode submit button + page structure  | **Live-verified**       | The real control is `data-e2e-locator="console-submit-button"`, and no verdict node exists before a submission |
-| LeetCode verdict node after a submission | **Not live-verified**   | It only exists after submitting, which needs an account. Mitigated by scanning every `data-e2e-locator` node   |
-| Manual browser smoke test                | **Not yet performed**   | Requires loading the unpacked extension and solving a problem                                                  |
-| Browser-store publication                | **Not started**         | Needs maintainer accounts, signing and review                                                                  |
+| Area                                     | Status                   | Notes                                                                                                          |
+| ---------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| Accepted-only gate                       | **Implemented, tested**  | Single validator; every non-Accepted status has a test                                                         |
+| Language coverage                        | **Implemented, tested**  | ~40 LeetCode languages; unknown languages are reported, never guessed                                          |
+| Topic-tag → folder mapping               | **Implemented, tested**  | `Hash Table` → `Hash-Table`, Unicode-safe, collision-safe, reserved-name-safe                                  |
+| Problem README                           | **Implemented, tested**  | Pre-filled template; your approach, complexity and notes survive every sync                                    |
+| Multi-language solutions                 | **Implemented, tested**  | One file per language, accumulated across submissions                                                          |
+| Manifest + hashing                       | **Implemented, tested**  | Versioned schema with migration, per-file sha256 and Git blob ids                                              |
+| Conflict protection                      | **Implemented, tested**  | Replace / Save version / Cancel; compare-by-blob-id before writing                                             |
+| Grouped commits                          | **Implemented, tested**  | One submission → one commit via the Git data API; never `force`                                                |
+| Idempotent retries                       | **Implemented, tested**  | Content-addressed blobs; a repeated event creates no duplicate files                                           |
+| Rate limits / offline / expiry           | **Implemented, tested**  | Bounded backoff, `retry-after`, retryable vs terminal error taxonomy                                           |
+| Revision scheduler                       | **Implemented, tested**  | Ladder 1/3/7/14/30 days; Easy advances, Hard holds, Again resets                                               |
+| Revision backup + restore                | **Implemented, tested**  | Backed up to `.leetcode-tracker/revisions.json`, restorable on a new device                                    |
+| Popup / dashboard / options              | **Verified in Chromium** | All three pages load, render and talk to the background worker with no console errors                          |
+| LeetCode GraphQL queries                 | **Live-verified**        | Confirmed against `leetcode.com/graphql`, from a plain client and from a real browser page                     |
+| LeetCode submit button + page structure  | **Live-verified**        | The real control is `data-e2e-locator="console-submit-button"`, and no verdict node exists before a submission |
+| LeetCode verdict node after a submission | **Not live-verified**    | It only exists after submitting, which needs an account. Mitigated by scanning every `data-e2e-locator` node   |
+| End-to-end sync in a browser             | **Not yet performed**    | Needs a GitHub account and an accepted submission; the procedure is in [docs/TESTING.md](docs/TESTING.md)      |
+| Browser-store publication                | **Not started**          | Needs maintainer accounts, signing and review                                                                  |
 
 ## Screenshots
 
-Not yet available. The popup, dashboard and options page are implemented, but no
-screenshots have been captured because the maintainers have not yet loaded the extension
-into a real browser session. This section will be filled in after the manual smoke test;
-until then, treat the UI as implemented but visually unverified.
+Captured from the built extension loaded unpacked in a real Chromium browser
+(Chrome for Testing, dark colour scheme), on a fresh install with nothing connected yet — so
+these show the genuine empty states, not mock-ups:
+
+| Dashboard                                                 | Options                                               |
+| --------------------------------------------------------- | ----------------------------------------------------- |
+| ![Dashboard, empty state](docs/screenshots/dashboard.png) | ![Options, empty state](docs/screenshots/options.png) |
+
+![Popup, empty state](docs/screenshots/popup.png)
+
+The colour scheme follows your system preference; these were captured with dark mode active.
+Populated views (problems, review queue, conflicts) are not shown yet because that needs a
+connected GitHub account and a synced submission.
 
 ## Requirements
 
@@ -137,7 +146,7 @@ npm run verify        # format check + lint + typecheck + tests + build
 npm run format        # prettier --write
 npm run lint          # eslint
 npm run typecheck     # tsc --noEmit
-npm test              # vitest run (403 tests)
+npm test              # vitest run (407 tests)
 npm run build         # bundle for Chrome and Firefox
 npm run package       # build and produce dist/<browser>.zip
 npm run icons         # regenerate icons/*.png
@@ -184,7 +193,7 @@ No framework earns its dependency budget here; the DOM helpers in `src/ui` are ~
 npm test
 ```
 
-- **403 tests** across 27 files: unit tests for all core logic, plus integration tests for
+- **407 tests** across 27 files: unit tests for all core logic, plus integration tests for
   the GitHub layers driven by an in-memory GitHub that reproduces content-addressed blobs,
   fast-forward-only ref updates and concurrent pushes.
 - Covered explicitly: Accepted vs non-Accepted, malformed metadata, hashing determinism,

@@ -3,7 +3,7 @@
 ## Running the suite
 
 ```bash
-npm test              # vitest run — 403 tests in 27 files
+npm test              # vitest run — 407 tests in 27 files
 npm run test:watch    # watch mode
 npm run verify        # format check + lint + typecheck + tests + build
 ```
@@ -80,8 +80,9 @@ Be precise about what has been proven. This project distinguishes four levels:
 | Absence of a verdict node on a fresh page load                | **Live-verified** (nothing to misread, so opening a solved problem cannot trigger a spurious sync)                                   |
 | LeetCode's DOM test-hook convention                           | **Live-verified** (`data-e2e-locator`, values prefixed `console-*`)                                                                  |
 | The verdict container's exact locator after a submission      | **Not live-verified** — it only exists after submitting, which needs an account. Mitigated by scanning every `data-e2e-locator` node |
-| Extraction of a real Accepted submission's source code        | **Not live-verified** — requires an authenticated browser session                                                                    |
-| Extension loading and use in Chrome / Firefox                 | **Not yet performed** — see the manual procedure below                                                                               |
+| Extension loading, manifest validity and UI rendering         | **Verified in a real Chromium browser** (see below)                                                                                  |
+| End-to-end sync: Accepted submission into a real repository   | **Not yet performed** — needs a GitHub account and an accepted submission; procedure below                                           |
+| Firefox runtime behaviour                                     | **Not yet performed** — the Firefox bundle builds and passes output verification, but has not been loaded                            |
 
 ### Live verification performed
 
@@ -144,7 +145,51 @@ Do not read more into this than it says: the _queries_, the _submit control_ and
 structure_ are verified; the verdict container's own locator is not, because it requires a
 submission.
 
-## Manual browser test procedure (not yet performed)
+### Extension loaded in a real browser
+
+The built `dist/chrome` directory was loaded unpacked into a real Chromium browser (Chrome
+for Testing, driven over CDP) and inspected through `chrome.developerPrivate`:
+
+```text
+id                heikpkcfelgnnolfmcdkdncahoombiog
+name              LeetSensei
+version           0.1.0
+state             ENABLED
+location          UNPACKED
+runtime errors    0
+manifest errors   0
+install warnings  0
+```
+
+All three extension pages were then opened and their rendered output and computed styles
+inspected:
+
+| Page             | Result                                                                                                                                                                                        |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `popup.html`     | Rendered the connection prompt, an idle sync card, `0 overdue / 0 due today / 0 upcoming` and the quick actions — which means `data/overview` round-tripped to the background worker and back |
+| `dashboard.html` | Rendered the status card, the four tabs (`Problems (0)`, `Review queue (0)`, `Conflicts (0)`, `History`), all four filters and the empty state                                                |
+| `options.html`   | Rendered all eight sections, 13 buttons and 9 inputs, including the repository, branch, interval and token controls                                                                           |
+
+Computed styles confirm the shared theme actually applied rather than merely loading:
+
+```text
+styleSheets        theme.css (62 rules), dashboard.css (6 rules)
+body background    rgb(15, 20, 25)   = --ls-bg        (#0f1419)
+card background    rgb(22, 28, 36)   = --ls-surface   (#161c24)
+card radius        8px               = --ls-radius
+badge background   rgb(22, 35, 47)   = --ls-info-bg
+selected tab line  rgb(90, 169, 245) = --ls-accent    (#5aa9f5)
+```
+
+What this proves: the manifest is valid enough for Chrome to accept it, the background
+service worker starts and answers messages, the message protocol works end to end, the
+defaults are seeded on first run, the theme and dark-mode branch apply, and every empty state
+renders. Screenshots from this run are in [docs/screenshots](screenshots) and the README.
+
+What it does **not** prove: that a real Accepted submission syncs into a real repository, or
+that the same pages behave identically in Firefox. Both remain outstanding below.
+
+## Manual browser test procedure (still required)
 
 This is the test that turns "implemented" into "manually verified". It needs a real browser
 and a GitHub account, so a maintainer must run it.

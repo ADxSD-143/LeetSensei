@@ -11,7 +11,7 @@ Pre-release work only: browser smoke testing, screenshots and store packaging. S
 ## [0.1.0] — 2026-10-21
 
 First working implementation. Everything below is covered by the automated suite
-(403 tests across 27 files); nothing is published to a browser store yet.
+(407 tests across 27 files); nothing is published to a browser store yet.
 
 ### Added
 
@@ -86,12 +86,22 @@ First working implementation. Everything below is covered by the automated suite
 - Token redaction in logs, no credentials in exports, no credentials in the repository.
 - Path validation before any API call; untrusted payloads validated at every boundary.
 
+### Verified in a real browser
+
+- The unpacked build loads in Chromium (Chrome for Testing) with **0 runtime errors, 0 manifest
+  errors and 0 install warnings**.
+- The popup, dashboard and options pages all render, apply the shared theme (including the dark
+  colour scheme) and communicate with the background service worker.
+- Screenshots from that session are in [docs/screenshots](docs/screenshots) and the README.
+
 ### Known limitations
 
 - Verdict detection depends on LeetCode's page markup for the trigger; everything after that
-  uses the API. Not live-verified — see
+  uses the API. The page structure and submit control are live-verified, but the verdict
+  container that appears _after_ a submission is not — see
   [docs/TESTING.md](docs/TESTING.md#verification-levels).
-- The extension has not been loaded into a real browser by the maintainers yet, so runtime
-  behaviour is unverified. The manual procedure is documented.
-- No screenshots yet.
+- A full end-to-end sync (Accepted submission into a real repository) has not been performed:
+  it needs a GitHub account and an accepted submission.
+- The Firefox bundle builds and passes output verification but has not been loaded in Firefox.
+- Populated screenshots are not available yet, because they need synced data.
 - Safari and mobile browsers are not supported.

@@ -2,19 +2,23 @@
 
 | Browser                          | Manifest | Background form                   | Status                                                                                |
 | -------------------------------- | -------- | --------------------------------- | ------------------------------------------------------------------------------------- |
-| Chrome 111+                      | MV3      | `service_worker` (classic script) | Build verified; not yet loaded manually                                               |
-| Brave (Chromium-based)           | MV3      | `service_worker`                  | Same build as Chrome; not yet loaded manually                                         |
-| Microsoft Edge                   | MV3      | `service_worker`                  | Same build as Chrome; untested                                                        |
-| Vivaldi / Opera (Chromium-based) | MV3      | `service_worker`                  | Same build as Chrome; untested                                                        |
-| Firefox 115+                     | MV3      | `background.scripts` event page   | Build verified; not yet loaded manually                                               |
+| Chrome 111+                      | MV3      | `service_worker` (classic script) | **Loaded unpacked in Chromium: accepted with 0 errors, pages render and respond**     |
+| Brave (Chromium-based)           | MV3      | `service_worker`                  | Same build as Chrome; not yet loaded                                                  |
+| Microsoft Edge                   | MV3      | `service_worker`                  | Same build as Chrome; not yet loaded                                                  |
+| Vivaldi / Opera (Chromium-based) | MV3      | `service_worker`                  | Same build as Chrome; not yet loaded                                                  |
+| Firefox 115+                     | MV3      | `background.scripts` event page   | Build and output verified; not yet loaded                                             |
 | Safari                           | —        | —                                 | **Not supported.** Requires an Xcode wrapper and a different extension model.         |
 | Mobile browsers                  | —        | —                                 | **Not supported.** No `chrome://extensions` equivalent for loading an unpacked build. |
 
-"Build verified" means `npm run build` produces a loadable directory for that engine and the
-generated manifest passes the project's own validation (permissions, CSP, background shape).
-"Loaded manually" would mean a human enabled the extension in that browser and synced a
-submission — that has not happened yet, so treat runtime behaviour in every browser as
-unverified until it does. See [TESTING.md](TESTING.md#manual-browser-test-procedure-not-yet-performed).
+"Build verified" means `npm run build` produces a loadable directory for that engine, the
+generated manifest passes the project's own validation, and `npm run verify:dist` confirms every
+referenced file exists and nothing unsafe is shipped.
+
+"Loaded unpacked in Chromium" is stronger and applies to Chrome only so far: the built directory
+was loaded into a real Chromium browser, Chrome reported 0 runtime errors, 0 manifest errors and
+0 install warnings, and the popup, dashboard and options pages were each opened and inspected.
+What is still unverified in every browser is a full sync of an accepted submission into a real
+repository. See [TESTING.md](TESTING.md#manual-browser-test-procedure-still-required).
 
 ## What differs between engines, and how it is handled
 

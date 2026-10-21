@@ -30,7 +30,7 @@ Legend: `[x]` done and verified · `[~]` implemented, not yet verified in a real
 - [x] GraphQL queries validated against the live endpoint, from a plain client and from a real browser page
 - [x] Submit-button identification and the absence of a pre-submission verdict node verified against the live page
 - [x] LeetCode's own `data-e2e-locator` hook scanned first, instead of relying on guessed class names
-- [~] The verdict container that appears _after_ a submission — still unverified, because it needs an account; see the manual procedure in [docs/TESTING.md](docs/TESTING.md#manual-browser-test-procedure-not-yet-performed)
+- [~] The verdict container that appears _after_ a submission — still unverified, because it needs an account; see the manual procedure in [docs/TESTING.md](docs/TESTING.md#manual-browser-test-procedure-still-required)
 
 ## Phase 3 — Solution organization
 
@@ -63,27 +63,31 @@ Legend: `[x]` done and verified · `[~]` implemented, not yet verified in a real
 
 ## Phase 6 — Cross-browser QA and release
 
-- [x] Unit and integration tests (403 tests, no network, no real repository)
+- [x] Unit and integration tests (407 tests, no network, no real repository)
 - [x] Offline, retry, duplicate event, conflict, partial write and unverified write cases
 - [x] Permissions and privacy review recorded in [docs/SECURITY.md](docs/SECURITY.md)
 - [x] Browser-specific installation and compatibility documentation
-- [ ] **Manual browser smoke test in Chrome and Firefox** — the next concrete task
+- [x] Extension loaded unpacked in a real Chromium browser: Chrome reports **0 runtime errors, 0 manifest errors, 0 install warnings**, and the popup, dashboard and options pages all render and talk to the background worker
+- [x] Screenshots captured from that real browser session and added to the README
+- [ ] **End-to-end sync in a browser** — needs a GitHub account and an Accepted submission; the next concrete task
+- [ ] Load and verify the Firefox bundle the same way
 - [ ] Automated browser end-to-end harness (Playwright with a loaded extension)
-- [ ] Screenshots in the README
 - [ ] Publish packages: Chrome Web Store, Firefox Add-ons
 - [ ] Publish release notes for the first public build
 
 ## Next up
 
-1. **Manual smoke test.** Follow
-   [docs/TESTING.md](docs/TESTING.md#manual-browser-test-procedure-not-yet-performed) in Chrome
-   and Firefox. This is the only way the verdict-detection step becomes verified, and it needs
-   a real browser and a GitHub account.
-2. Fix anything it surfaces, adding a regression test for each bug.
-3. Capture screenshots and finish the README section.
+1. **End-to-end sync in a browser.** Follow
+   [docs/TESTING.md](docs/TESTING.md#manual-browser-test-procedure-still-required) with a GitHub
+   account: connect, solve a problem, get it Accepted, and confirm the repository contents,
+   conflict flow, revision queue, backup and restore. Everything up to the Accepted verdict is
+   already verified; this is the remaining step, and it needs credentials a maintainer holds.
+2. **Load the Firefox bundle** and repeat the page checks that were done in Chromium.
+3. Fix anything those surface, adding a regression test for each bug.
 4. Add a Playwright harness for the extension pages (popup, dashboard, options) with a mocked
    background, which needs no LeetCode session.
 5. Register the OAuth App, bake in the client id, and prepare store listings.
+6. Capture populated screenshots (problems, review queue, conflicts) once data exists.
 
 ## Deliberately out of scope
 
@@ -106,4 +110,4 @@ Legend: `[x]` done and verified · `[~]` implemented, not yet verified in a real
 | 5   | Sync errors are visible and retryable                                    | ✅ Coded errors surfaced in the popup and dashboard       |
 | 6   | Revision state can be restored from the repository backup                | ✅ Restore flow tested against the in-memory GitHub       |
 | 7   | No telemetry or analytics is sent                                        | ✅ No third-party destination exists in the code          |
-| 8   | Tests cover normalization, conflict handling, retries and revision logic | ✅ 403 tests, 27 files                                    |
+| 8   | Tests cover normalization, conflict handling, retries and revision logic | ✅ 407 tests, 27 files                                    |

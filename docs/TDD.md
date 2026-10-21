@@ -208,7 +208,7 @@ Every item that was previously open. Each is implemented and covered by tests.
 
 1. **Verdict-detection resilience.** The DOM trigger is unit tested but not live-verified, and
    a LeetCode markup change would need a predicate update. The manual smoke test in
-   [TESTING.md](TESTING.md#manual-browser-test-procedure-not-yet-performed) is the next step.
+   [TESTING.md](TESTING.md#manual-browser-test-procedure-still-required) is the next step.
 2. **Automated browser end-to-end tests.** Deferred with reasoning in
    [TESTING.md](TESTING.md#what-is-not-covered).
 3. **Multi-device revision merging.** Restore currently resolves per problem by recency; a
