@@ -1,6 +1,6 @@
 {
   "name": "leetsensei",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Open-source browser extension that syncs Accepted LeetCode submissions to GitHub, organizes them by topic, and tracks revisions.",
   "license": "MIT",
@@ -15,6 +15,7 @@
     "build:firefox": "node scripts/build.mjs --browser=firefox",
     "build:review": "node scripts/build.mjs --no-minify",
     "package": "node scripts/build.mjs --zip",
+    "release": "npm run verify && node scripts/build.mjs --release --browser=chrome --zip && node scripts/verify-dist.mjs",
     "verify:dist": "node scripts/verify-dist.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

@@ -6,13 +6,16 @@
 //   node scripts/build.mjs --watch          # rebuild on change (chrome)
 //   node scripts/build.mjs --no-minify      # readable output, for store source review
 //   node scripts/build.mjs --zip            # also produce release archives
+//   node scripts/build.mjs --release --browser=chrome --zip
+//                                           # store build: requires a client id and
+//                                           # disables the personal-access-token path
 import { build, context } from 'esbuild';
 import { cp, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildManifest, validateManifestShape } from '../src/manifest/build-manifest.ts';
+import { createZip } from './zip.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');
@@ -26,6 +29,7 @@ const option = (name, fallback) => {
 
 const watch = flag('watch');
 const zip = flag('zip');
+const release = flag('release');
 const requested = option('browser', '');
 const browsers = requested ? [requested] : ['chrome', 'firefox'];
 for (const browser of browsers) {
@@ -35,8 +39,42 @@ for (const browser of browsers) {
   }
 }
 
+if (release && (browsers.length !== 1 || browsers[0] !== 'chrome')) {
+  console.error('--release produces the Chrome Web Store package. Pass --browser=chrome.');
+  process.exit(2);
+}
+
+/**
+ * Release builds must ship a public OAuth client id, otherwise every user gets
+ * an extension that cannot connect. Development builds may omit it and fall
+ * back to the personal-access-token path instead.
+ */
+function resolveClientId(raw, isRelease) {
+  const trimmed = (raw ?? '').trim();
+  if (!isRelease) return trimmed;
+
+  if (trimmed === '') {
+    console.error(
+      [
+        'Release build aborted: LEETSENSEI_GITHUB_CLIENT_ID is not set.',
+        '',
+        'Register a GitHub OAuth App with "Device flow" enabled, then set its public',
+        'client id and rebuild. See docs/RELEASE.md.',
+      ].join('\n'),
+    );
+    process.exit(2);
+  }
+  if (!/^[A-Za-z0-9._-]{10,64}$/.test(trimmed)) {
+    console.error(
+      `Release build aborted: LEETSENSEI_GITHUB_CLIENT_ID "${trimmed}" does not look like a GitHub client id.`,
+    );
+    process.exit(2);
+  }
+  return trimmed;
+}
+
 const pkg = await readFileJson(join(ROOT, 'package.json'));
-const githubClientId = process.env.LEETSENSEI_GITHUB_CLIENT_ID ?? '';
+const githubClientId = resolveClientId(process.env.LEETSENSEI_GITHUB_CLIENT_ID, release);
 
 /** Extension entry points, bundled as classic scripts (no ES module output). */
 const ENTRIES = {
@@ -81,6 +119,8 @@ function esbuildOptions(browser, outdir, minify) {
       __LEETSENSEI_VERSION__: JSON.stringify(pkg.version),
       __LEETSENSEI_GITHUB_CLIENT_ID__: JSON.stringify(githubClientId),
       __LEETSENSEI_BROWSER__: JSON.stringify(browser),
+      // Store builds only ever offer the device flow.
+      __LEETSENSEI_ALLOW_PAT__: JSON.stringify(!release),
     },
   };
 }
@@ -132,24 +172,12 @@ async function buildBrowser(browser, minify) {
 function archive(target) {
   const zipPath = `${target.outdir}.zip`;
   try {
-    if (process.platform === 'win32') {
-      execFileSync(
-        'powershell.exe',
-        [
-          '-NoProfile',
-          '-NonInteractive',
-          '-Command',
-          `Compress-Archive -Path '${target.outdir}\\*' -DestinationPath '${zipPath}' -Force`,
-        ],
-        { stdio: 'inherit' },
-      );
-    } else {
-      execFileSync('zip', ['-qr', zipPath, '.'], { cwd: target.outdir, stdio: 'inherit' });
-    }
-    console.log(`[${target.browser}] packaged ${relative(ROOT, zipPath)}`);
+    const { entries, bytes } = createZip(target.outdir, zipPath);
+    console.log(
+      `[${target.browser}] packaged ${relative(ROOT, zipPath)} (${entries} entries, ${(bytes / 1024).toFixed(0)} KB)`,
+    );
   } catch (error) {
     console.error(`[${target.browser}] packaging failed: ${error.message}`);
-    console.error('Install a zip tool or package the directory manually.');
     process.exitCode = 1;
   }
 }
