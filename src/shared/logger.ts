@@ -6,7 +6,7 @@
  * before it is formatted.
  */
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'silent';
 
 export interface LogEntry {
   at: string;
@@ -61,7 +61,14 @@ export interface Logger {
   error(message: string, details?: unknown): void;
 }
 
-const LEVEL_ORDER: Record<LogLevel, number> = { debug: 10, info: 20, warn: 30, error: 40 };
+const LEVEL_ORDER: Record<LogLevel, number> = {
+  debug: 10,
+  info: 20,
+  warn: 30,
+  error: 40,
+  // Nothing is printed, but everything is still recorded in the buffer.
+  silent: 100,
+};
 
 let threshold: number = LEVEL_ORDER.info;
 
@@ -69,7 +76,12 @@ export function setLogLevel(level: LogLevel): void {
   threshold = LEVEL_ORDER[level];
 }
 
-function emit(level: LogLevel, scope: string, message: string, details?: unknown): void {
+function emit(
+  level: Exclude<LogLevel, 'silent'>,
+  scope: string,
+  message: string,
+  details?: unknown,
+): void {
   const safeMessage = redactText(message);
   record({ at: new Date().toISOString(), level, scope, message: safeMessage });
   if (LEVEL_ORDER[level] < threshold) return;

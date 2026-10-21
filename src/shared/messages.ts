@@ -29,10 +29,7 @@ export type UiMessage =
   | { type: 'data/overview' }
   | { type: 'data/diagnostics' }
   | { type: 'github/device-start'; payload: { scope: string } }
-  | {
-      type: 'github/device-poll';
-      payload: { deviceCode: string; interval: number; expiresIn: number };
-    }
+  | { type: 'github/device-poll'; payload: { deviceCode: string } }
   | { type: 'github/pat-save'; payload: { token: string } }
   | { type: 'github/verify' }
   | { type: 'github/list-repos' }
