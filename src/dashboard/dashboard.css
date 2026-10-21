@@ -2,13 +2,38 @@
    The hero is always a night scene, even in the light theme: it is a deliberate
    dark plate on a rice-paper page, which also guarantees text contrast. */
 
+/* The page is a full-width stack; each section centres itself in one column.
+   Only the hero opts out, which is how it reaches both viewport edges without a
+   `100vw` hack (100vw includes the scrollbar and used to cause real overflow). */
 .ls-page {
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 22px 20px 64px;
+  padding: 0 0 64px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
+}
+
+/* #app spans the viewport so the hero inside it can; its sections take the column. */
+#app {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+#header,
+#app > *:not(.ls-hero) {
+  width: min(100% - 40px, 1140px);
+  margin-inline: auto;
+}
+
+/* Panels sit slightly tighter on the dashboard, so the quest board reaches the
+   first viewport rather than starting below it. */
+#app > .ls-card {
+  padding: 12px;
+}
+
+#header {
+  padding: 14px 0 12px;
 }
 
 #header .ls-brand img {
@@ -19,6 +44,8 @@
 
 /* ------------------------------------------------------------------- hero */
 
+/* The scene is part of the page, not a card: it bleeds to both viewport edges
+   with no border or radius, and the text inside re-aligns to the content column. */
 .ls-hero {
   --hero-ink: #0a0b10;
   --hero-text: #f2ecdd;
@@ -27,15 +54,14 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  border-radius: var(--ls-radius-lg);
-  border: 1px solid #2a2b33;
+  width: 100%;
+  margin: 0;
   /* Opaque ground, so contrast never depends on the gradient rendering. */
   background-color: var(--hero-ink);
-  background-image: linear-gradient(160deg, #0d1018 0%, #0a0b10 55%, #07080c 100%);
-  min-height: 262px;
+  background-image: linear-gradient(180deg, #0c0f16 0%, #0a0b10 62%, #07080c 100%);
+  min-height: clamp(240px, 30vh, 340px);
   display: flex;
   align-items: flex-end;
-  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.42);
 }
 
 .ls-hero__art {
@@ -47,9 +73,9 @@
 
 .ls-hero__layer {
   position: absolute;
-  inset: -5%;
-  width: 110%;
-  height: 110%;
+  inset: -6%;
+  width: 112%;
+  height: 112%;
   object-fit: cover;
   transform: translate3d(
     calc(var(--px, 0) * var(--depth, 4) * 1px),
@@ -59,53 +85,277 @@
   will-change: transform;
 }
 
-.ls-hero__layer--moon {
-  --depth: 3;
-}
-.ls-hero__layer--ridges {
-  --depth: 6;
-}
-.ls-hero__layer--ronin {
-  --depth: 9;
-}
-.ls-hero__layer--fog {
-  --depth: 12;
-  animation: ls-fog-drift 52s ease-in-out infinite alternate;
+.ls-hero__layer--texture {
+  --depth: 1.5;
+  opacity: 0.85;
+  mix-blend-mode: screen;
 }
 
-@keyframes ls-fog-drift {
+.ls-hero__layer--moon {
+  --depth: 2.8;
+  animation: ls-moon-entrance 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.ls-hero__layer--ridges {
+  --depth: 4.8;
+  animation: ls-ridges-entrance 1.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Mid-ground fog: slow continuous drift behind temple and ronin */
+.ls-hero__layer--fog-mid {
+  --depth: 6.5;
+  opacity: 0.75;
+  animation: ls-fog-drift-mid 32s ease-in-out infinite alternate;
+}
+
+.ls-hero__layer--temple {
+  --depth: 7.5;
+}
+
+.ls-hero__layer--ronin {
+  --depth: 9.8;
+  animation: ls-ronin-breeze 7s ease-in-out infinite alternate;
+}
+
+/* Foreground fog: drifting in opposite direction at different speed for real 3D depth */
+.ls-hero__layer--fog-fore {
+  --depth: 13.5;
+  opacity: 0.85;
+  animation: ls-fog-drift-fore 22s ease-in-out infinite alternate;
+}
+
+@keyframes ls-moon-entrance {
   from {
-    translate: -1.4% 0;
+    opacity: 0;
+    transform: scale(0.96) translate3d(0, 10px, 0);
   }
   to {
-    translate: 1.4% 0;
+    opacity: 1;
+    transform: scale(1) translate3d(0, 0, 0);
   }
 }
 
-/* Dark ink veil so text always sits on enough contrast. */
+@keyframes ls-ridges-entrance {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes ls-fog-drift-mid {
+  0% {
+    transform: translate3d(calc(var(--px, 0) * 6.5px - 2.8%), calc(var(--py, 0) * 6.5px), 0);
+  }
+  100% {
+    transform: translate3d(calc(var(--px, 0) * 6.5px + 2.8%), calc(var(--py, 0) * 6.5px), 0);
+  }
+}
+
+@keyframes ls-fog-drift-fore {
+  0% {
+    transform: translate3d(calc(var(--px, 0) * 13.5px + 3.8%), calc(var(--py, 0) * 13.5px), 0);
+  }
+  100% {
+    transform: translate3d(calc(var(--px, 0) * 13.5px - 3.8%), calc(var(--py, 0) * 13.5px), 0);
+  }
+}
+
+@keyframes ls-ronin-breeze {
+  0% {
+    transform: translate3d(calc(var(--px, 0) * 9.8px), calc(var(--py, 0) * 9.8px), 0);
+  }
+  100% {
+    transform: translate3d(
+      calc(var(--px, 0) * 9.8px + 0.4px),
+      calc(var(--py, 0) * 9.8px - 0.8px),
+      0
+    );
+  }
+}
+
+/* Moonlight pool over the disc: a slow breath, glowing gently */
+.ls-hero__moonlight {
+  position: absolute;
+  left: 63.8%;
+  top: 42.8%;
+  width: 32%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    rgba(255, 250, 238, 0.28) 0%,
+    rgba(233, 226, 210, 0.12) 42%,
+    transparent 72%
+  );
+  opacity: 0.7;
+  animation: ls-moonlight 9s ease-in-out infinite alternate;
+}
+
+@keyframes ls-moonlight {
+  0% {
+    opacity: 0.45;
+    transform: scale(0.97);
+  }
+  100% {
+    opacity: 0.85;
+    transform: scale(1.04);
+  }
+}
+
+/* A sword glint precisely aligned with the katana blade geometry:
+   Blade extends from (969, 243) to (1053, 309) in 1440x420 coordinate system (37.8° angle).
+   The glint travels strictly along this blade vector once every 8.5s, then rests. */
+.ls-hero__glint {
+  position: absolute;
+  left: 70.2%;
+  top: 65.2%;
+  width: 90px;
+  height: 4.5px;
+  rotate: 37.8deg;
+  transform-origin: left center;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ls-hero__glint-shimmer {
+  width: 26px;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.95) 50%,
+    transparent 100%
+  );
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.9))
+    drop-shadow(0 0 8px rgba(233, 226, 210, 0.6));
+  opacity: 0;
+  animation: ls-glint-sweep 8.5s ease-in-out infinite;
+}
+
+@keyframes ls-glint-sweep {
+  0%,
+  65% {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  68% {
+    opacity: 0.9;
+  }
+  75% {
+    opacity: 1;
+    transform: translateX(85px);
+  }
+  78%,
+  100% {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+}
+
+/* Sparse drifting motes: six dots, no images, disabled on touch and reduced motion. */
+.ls-hero__motes {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.ls-hero__motes span {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(233, 226, 210, 0.5);
+  animation: ls-mote 18s ease-in-out infinite;
+}
+
+.ls-hero__motes span:nth-child(1) {
+  left: 22%;
+  top: 58%;
+  animation-duration: 21s;
+}
+.ls-hero__motes span:nth-child(2) {
+  left: 38%;
+  top: 72%;
+  animation-delay: 3s;
+  animation-duration: 26s;
+}
+.ls-hero__motes span:nth-child(3) {
+  left: 54%;
+  top: 44%;
+  animation-delay: 6s;
+}
+.ls-hero__motes span:nth-child(4) {
+  left: 67%;
+  top: 64%;
+  animation-delay: 9s;
+  animation-duration: 24s;
+}
+.ls-hero__motes span:nth-child(5) {
+  left: 81%;
+  top: 52%;
+  animation-delay: 12s;
+}
+.ls-hero__motes span:nth-child(6) {
+  left: 92%;
+  top: 70%;
+  animation-delay: 15s;
+  animation-duration: 29s;
+}
+
+@keyframes ls-mote {
+  0%,
+  100% {
+    opacity: 0;
+    translate: 0 6px;
+  }
+  30%,
+  70% {
+    opacity: 0.55;
+    translate: 0 -10px;
+  }
+}
+
+/* Ink veil so text always sits on enough contrast. It falls away by two thirds
+   of the width, which is what lets the moon, pagoda and the ronin read. */
 .ls-hero::after {
   content: '';
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 2;
   background:
     linear-gradient(
       90deg,
-      rgba(6, 7, 10, 0.94) 0%,
-      rgba(6, 7, 10, 0.72) 46%,
-      rgba(6, 7, 10, 0.12) 78%
+      rgba(6, 7, 10, 0.95) 0%,
+      rgba(6, 7, 10, 0.74) 38%,
+      rgba(6, 7, 10, 0.3) 66%,
+      rgba(6, 7, 10, 0.04) 100%
     ),
-    linear-gradient(0deg, rgba(6, 7, 10, 0.85), transparent 55%);
+    linear-gradient(0deg, rgba(6, 7, 10, 0.86), transparent 52%);
   pointer-events: none;
 }
 
+/* Aligns the hero's copy with the same column as every other section. */
 .ls-hero__content {
   position: relative;
-  z-index: 2;
-  padding: 22px 26px 24px;
+  z-index: 3;
+  width: min(100% - 40px, 1140px);
+  margin-inline: auto;
+  padding: 30px 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.ls-hero__content > * {
   max-width: 640px;
 }
 
@@ -199,7 +449,7 @@
 .ls-status {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 20px;
+  gap: 16px;
   align-items: center;
 }
 
@@ -210,8 +460,8 @@
 }
 
 .ls-level-ring {
-  width: 82px;
-  height: 82px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -224,8 +474,8 @@
 }
 
 .ls-level-ring__inner {
-  width: 68px;
-  height: 68px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
   background: var(--ls-surface);
   display: flex;
@@ -237,7 +487,7 @@
 
 .ls-level-ring__value {
   font-family: var(--ls-font-display);
-  font-size: 24px;
+  font-size: 21px;
   font-weight: 700;
   color: var(--ls-text);
 }
@@ -272,17 +522,28 @@
 }
 
 .ls-meter {
-  height: 6px;
+  position: relative;
+  height: 7px;
   border-radius: 999px;
   background: var(--ls-border);
   overflow: hidden;
 }
 
+/* Gold stays a hairline detail, never a dominant glow. */
+.ls-meter::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ls-gold) 40%, transparent);
+  pointer-events: none;
+}
+
 .ls-meter__fill {
   height: 100%;
   width: calc(var(--p, 0) * 100%);
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--ls-accent), var(--ls-gold));
+  background: var(--ls-accent-strong);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--ls-accent) 45%, transparent);
   transition: width 0.45s ease;
 }
 
@@ -336,34 +597,45 @@
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 }
 
+/* Quest cards are bone paper with ink rules: no coloured fills, no tan or gold
+   bordering. Colours come from the `ls-paper` token remap in the markup. */
 .ls-quest {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 14px 12px 16px;
-  border: 1px solid var(--ls-border);
-  border-left: 3px solid var(--ls-border-strong);
-  border-radius: var(--ls-radius);
-  background: var(--ls-surface);
+  padding: 12px 14px;
+  border-left: 3px solid var(--ls-ink-line);
+  border-radius: 4px;
   transition:
     border-color 0.16s ease,
-    box-shadow 0.16s ease;
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+
+/* A thin inner paper rule, like a ruled journal line. */
+.ls-quest::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px solid color-mix(in srgb, var(--ls-ink) 10%, transparent);
+  border-radius: 2px;
+  pointer-events: none;
 }
 
 .ls-quest:hover {
-  border-color: var(--ls-border-strong);
-  box-shadow: var(--ls-shadow-soft);
+  box-shadow: var(--ls-shadow);
 }
 
+/* Due state is carried by a restrained crimson edge, not by filling the card. */
 .ls-quest--overdue {
-  border-left-color: var(--ls-err);
+  border-left-color: var(--ls-ink-err);
 }
 .ls-quest--due {
-  border-left-color: var(--ls-warn);
+  border-left-color: color-mix(in srgb, var(--ls-ink-err) 52%, transparent);
 }
 .ls-quest--upcoming {
-  border-left-color: var(--ls-border-strong);
+  border-left-color: var(--ls-ink-line);
 }
 .ls-quest--mastered {
   border-left-color: var(--ls-ok);
@@ -529,6 +801,23 @@
   gap: 0;
 }
 
+/* The journal is a bound page rather than a list of dark rows. */
+.ls-journal.ls-paper {
+  padding: 4px 16px;
+  border-radius: 4px;
+}
+
+/* Objectives and conflicts sit on paper too; the tokens are remapped on the
+   list, so each row is a leaf. */
+.ls-list.ls-paper-tokens li {
+  background-color: var(--ls-surface);
+  background-image: url('art/paper-grain.svg');
+  background-size: 120px 120px;
+  border: 1px solid var(--ls-border);
+  border-radius: 4px;
+  color: var(--ls-text);
+}
+
 .ls-journal__row {
   display: grid;
   grid-template-columns: 132px 1fr auto auto;
@@ -681,15 +970,205 @@
   }
 }
 
+.ls-btn--rank-info {
+  margin-left: 8px;
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: var(--ls-radius-sm);
+  background: rgba(230, 57, 70, 0.12);
+  border: 1px solid rgba(230, 57, 70, 0.35);
+  color: var(--ls-text);
+  font-family: var(--ls-font-mono);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+  vertical-align: middle;
+}
+
+.ls-btn--rank-info:hover {
+  background: var(--ls-accent);
+  border-color: var(--ls-accent);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(230, 57, 70, 0.45);
+}
+
+.ls-row--align-center {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ================= Rank System Modal (Japanese Cyberpunk / Manga Aesthetic) ================= */
+.ls-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(8, 10, 15, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  animation: ls-fade-in 0.22s ease-out both;
+}
+
+.ls-modal {
+  position: relative;
+  width: min(100%, 560px);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-border-strong);
+  border-radius: var(--ls-radius);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.65),
+    0 0 24px rgba(230, 57, 70, 0.15);
+  padding: 24px 26px;
+  animation: ls-modal-scale 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes ls-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ls-modal-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.ls-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--ls-border);
+  padding-bottom: 14px;
+}
+
+.ls-modal__sub {
+  display: block;
+  font-family: var(--ls-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--ls-accent);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.ls-modal__title {
+  margin: 0;
+  font-family: var(--ls-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ls-text);
+}
+
+.ls-modal__close {
+  background: transparent;
+  border: 1px solid var(--ls-border);
+  color: var(--ls-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.18s ease;
+}
+
+.ls-modal__close:hover {
+  border-color: var(--ls-accent);
+  color: var(--ls-text);
+  background: rgba(230, 57, 70, 0.15);
+}
+
+.ls-xp-rates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 10px;
+}
+
+.ls-xp-pill {
+  padding: 4px 10px;
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-alt);
+  border: 1px solid var(--ls-border);
+  font-family: var(--ls-font-mono);
+  font-size: 11px;
+  color: var(--ls-text);
+}
+
+.ls-rank-ladder {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.ls-rank-ladder__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-alt);
+  border: 1px solid var(--ls-border);
+  transition: all 0.2s ease;
+}
+
+.ls-rank-ladder__row--active {
+  background: rgba(230, 57, 70, 0.12);
+  border-color: var(--ls-accent);
+  box-shadow: 0 0 12px rgba(230, 57, 70, 0.2);
+}
+
+.ls-rank-ladder__badge-col {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ls-rank-ladder__level {
+  font-family: var(--ls-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ls-gold);
+}
+
+.ls-rank-ladder__name {
+  font-family: var(--ls-font-display);
+  font-size: 16px;
+  color: var(--ls-text);
+}
+
+.ls-rank-ladder__xp {
+  font-family: var(--ls-font-mono);
+  font-size: 12px;
+  color: var(--ls-muted);
+}
+
 /* ------------------------------------------------------------------ responsive */
 
 @media (max-width: 900px) {
   .ls-hero {
-    min-height: 218px;
+    min-height: clamp(240px, 32vh, 300px);
   }
 
   .ls-hero__content {
-    padding: 18px 20px 20px;
+    padding: 22px 20px 24px;
   }
 
   .ls-status {
@@ -722,16 +1201,75 @@
 
 @media (max-width: 640px) {
   .ls-page {
-    padding: 16px 14px 48px;
+    padding: 0 0 48px;
     gap: 14px;
   }
 
+  .ls-page > *:not(.ls-hero),
+  #header,
+  #app > *:not(.ls-hero),
+  .ls-hero__content {
+    width: min(100% - 28px, 1140px);
+  }
+
+  /* Compact hero: the quest board must stay the first thing you scroll to. */
   .ls-hero {
-    min-height: 186px;
+    min-height: 200px;
+  }
+
+  .ls-hero__content {
+    padding: 18px 14px 20px;
+  }
+
+  .ls-hero__content > * {
+    max-width: none;
+  }
+
+  /* Keep the focal points in frame instead of cropping them away. */
+  .ls-hero__layer--ronin {
+    object-position: 64% 50%;
+  }
+
+  .ls-hero__layer--moon {
+    object-position: 64% 50%;
+  }
+
+  .ls-hero__layer--temple {
+    display: none;
+  }
+
+  .ls-hero__motes {
+    display: none;
+  }
+
+  .ls-hero__moonlight {
+    left: 66%;
+    top: 30%;
+    width: 62%;
+  }
+
+  /* The blade is not in a predictable place at this size. */
+  .ls-hero__glint {
+    display: none;
+  }
+
+  /* Text sits above the whole width here, so the veil has to come from below. */
+  .ls-hero::after {
+    background: linear-gradient(
+      0deg,
+      rgba(6, 7, 10, 0.96) 26%,
+      rgba(6, 7, 10, 0.72) 62%,
+      rgba(6, 7, 10, 0.42) 100%
+    );
   }
 
   .ls-hero__title {
-    font-size: 26px;
+    font-size: 24px;
+  }
+
+  .ls-hero__meta {
+    gap: 6px 12px;
+    font-size: 11px;
   }
 
   .ls-filters {
@@ -755,6 +1293,22 @@
 @media (prefers-reduced-motion: reduce) {
   .ls-hero__layer {
     transform: none !important;
+    animation: none !important;
+  }
+
+  .ls-hero__layer--fog-mid,
+  .ls-hero__layer--fog-fore,
+  .ls-hero__layer--ronin,
+  .ls-hero__layer--moon,
+  .ls-hero__layer--ridges,
+  .ls-hero__moonlight {
+    animation: none !important;
+  }
+
+  /* Pure decoration: remove it rather than freeze it mid-drift. */
+  .ls-hero__motes,
+  .ls-hero__glint {
+    display: none !important;
   }
 
   .ls-tilt {

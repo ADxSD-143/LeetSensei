@@ -1,30 +1,68 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
   <defs>
-    <linearGradient id="farFade" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#232a36" stop-opacity="0.9"/>
-      <stop offset="1" stop-color="#1a202a" stop-opacity="0.9"/>
+    <!-- Layer 1: Distant jagged ink wash peaks -->
+    <linearGradient id="ridgeFarGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#323c4e" stop-opacity="0.95"/>
+      <stop offset="60%" stop-color="#1f2634" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#121722" stop-opacity="0.85"/>
     </linearGradient>
-    <linearGradient id="midFade" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#161b25"/>
-      <stop offset="1" stop-color="#0f131a"/>
+
+    <!-- Layer 2: Mid-ground mountain silhouettes -->
+    <linearGradient id="ridgeMidGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c2331"/>
+      <stop offset="50%" stop-color="#141a24"/>
+      <stop offset="100%" stop-color="#0b0f16"/>
     </linearGradient>
-    <linearGradient id="nearFade" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#0b0d12"/>
-      <stop offset="1" stop-color="#06070a"/>
+
+    <!-- Layer 3: Foreground cliff plateau -->
+    <linearGradient id="ridgeNearGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#11151e"/>
+      <stop offset="40%" stop-color="#0a0c12"/>
+      <stop offset="100%" stop-color="#050608"/>
+    </linearGradient>
+
+    <!-- Mountain misty atmospheric fog gradient -->
+    <linearGradient id="hazeGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8fa3be" stop-opacity="0.18"/>
+      <stop offset="60%" stop-color="#55667e" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#0a0c12" stop-opacity="0"/>
     </linearGradient>
   </defs>
 
-  <!-- Distant ridge: low contrast, sits behind the moon's halo. -->
-  <path fill="url(#farFade)"
-        d="M0 268 96 226 168 246 246 198 322 232 402 186 486 226 566 194 646 236 726 202 812 240 892 206 972 244 1054 200 1136 238 1216 208 1300 240 1380 212 1440 236V420H0Z"/>
+  <!-- ================= FAR PEAKS (Traditional Japanese Ink Wash Style) ================= -->
+  <!-- Left far peaks -->
+  <path fill="url(#ridgeFarGrad)"
+        d="M0 240 L45 210 L95 225 L160 175 L230 205 L310 160 L380 195 L460 155 L530 185 L610 165 L680 198 L750 172 L820 195 L885 180 L950 205 L1020 170 L1100 202 L1180 168 L1260 196 L1340 175 L1400 190 L1440 182 V420 H0 Z"/>
+  <!-- Moonlit crest highlights on far peaks -->
+  <path fill="none" stroke="#e9f1fc" stroke-opacity="0.25" stroke-width="1.8"
+        d="M0 240 L45 210 L95 225 L160 175 L230 205 L310 160 L380 195 L460 155 L530 185 L610 165 L680 198 L750 172 L820 195 L885 180 L950 205 L1020 170 L1100 202 L1180 168 L1260 196 L1340 175 L1400 190 L1440 182"/>
 
-  <!-- Middle ridge. -->
-  <path fill="url(#midFade)"
-        d="M0 322 82 292 158 312 244 268 330 306 424 262 512 304 606 272 700 312 796 278 892 316 988 282 1084 320 1180 286 1272 318 1364 288 1440 312V420H0Z"/>
+  <!-- Atmospheric haze between far and mid ridges -->
+  <rect x="0" y="210" width="1440" height="75" fill="url(#hazeGrad)"/>
 
-  <!-- Near ridge with a faint rim light along the crest. -->
-  <path fill="url(#nearFade)"
-        d="M0 372 78 350 150 366 246 330 336 362 438 332 528 366 636 340 744 372 852 344 960 374 1068 348 1176 376 1284 352 1392 372 1440 364V420H0Z"/>
-  <path fill="none" stroke="#e9e2d2" stroke-opacity="0.10" stroke-width="1.5"
-        d="M0 372 78 350 150 366 246 330 336 362 438 332 528 366 636 340 744 372 852 344 960 374 1068 348 1176 376 1284 352 1392 372 1440 364"/>
+  <!-- ================= MID RIDGES (Organic craggy shapes) ================= -->
+  <path fill="url(#ridgeMidGrad)"
+        d="M0 310 L60 282 L130 298 L210 260 L295 285 L385 248 L480 278 L570 252 L665 280 L760 255 L845 282 L930 265 L1025 290 L1115 262 L1200 288 L1295 260 L1380 282 L1440 270 V420 H0 Z"/>
+  <!-- Rim glow on mid ridge -->
+  <path fill="none" stroke="#b4c6dc" stroke-opacity="0.2" stroke-width="1.5"
+        d="M0 310 L60 282 L130 298 L210 260 L295 285 L385 248 L480 278 L570 252 L665 280 L760 255 L845 282 L930 265 L1025 290 L1115 262 L1200 288 L1295 260 L1380 282 L1440 270"/>
+
+  <!-- ================= FOREGROUND CLIFF / PLATEAU ================= -->
+  <!-- The dramatic high crag where the ronin stands in Japanese master reference B -->
+  <path fill="url(#ridgeNearGrad)"
+        d="M0 375 L80 358 L180 370 L290 348 L400 365 L520 342 L640 360 L730 345 L780 358 L820 348 
+           L850 338 L870 342 L910 335 L960 336 L1000 344 L1050 358 L1140 348 L1250 368 L1360 350 L1440 362 V420 H0 Z"/>
+  <!-- Subtle stone edge texture highlights -->
+  <path fill="none" stroke="#8fa0b8" stroke-opacity="0.22" stroke-width="1.4"
+        d="M0 375 L80 358 L180 370 L290 348 L400 365 L520 342 L640 360 L730 345 L780 358 L820 348 
+           L850 338 L870 342 L910 335 L960 336 L1000 344 L1050 358 L1140 348 L1250 368 L1360 350 L1440 362"/>
+
+  <!-- Craggy rock hatching on the hero cliff (beneath the ronin) -->
+  <g stroke="#2a3342" stroke-width="1.5" stroke-opacity="0.5" stroke-linecap="round">
+    <line x1="840" y1="350" x2="860" y2="385"/>
+    <line x1="870" y1="355" x2="890" y2="395"/>
+    <line x1="910" y1="345" x2="930" y2="388"/>
+    <line x1="950" y1="352" x2="970" y2="392"/>
+    <line x1="980" y1="360" x2="1005" y2="400"/>
+  </g>
 </svg>

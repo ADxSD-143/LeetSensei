@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <!-- Multi-tiered pagoda wood gradient -->
+    <linearGradient id="pagodaWood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2c3645"/>
+      <stop offset="60%" stop-color="#1e2532"/>
+      <stop offset="100%" stop-color="#121822"/>
+    </linearGradient>
+
+    <!-- Torii vermilion lacquer aged in night shadow -->
+    <linearGradient id="toriiVermilion" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5a1820"/>
+      <stop offset="50%" stop-color="#3c1015"/>
+      <stop offset="100%" stop-color="#1a080a"/>
+    </linearGradient>
+
+    <!-- Japanese Bonsai Pine foliage gradient -->
+    <linearGradient id="pineGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1f2937"/>
+      <stop offset="70%" stop-color="#131b26"/>
+      <stop offset="100%" stop-color="#0a0e14"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ==================== JAPANESE WINDSWEPT PINE (MATSU) ====================
+       Placed on the rocky precipice to the right, exactly matching Master Reference B.
+       Trunk branches from x=1110, spreading gnarled branches across (1080 - 1220, 240 - 340).
+  -->
+  <g id="windswept-pine">
+    <!-- Gnarled pine trunk emerging from rock crag -->
+    <path fill="#0b0f16"
+          d="M1125 348 
+             C1120 330 1115 315 1122 298 
+             C1128 285 1138 275 1152 268 
+             C1165 262 1180 258 1195 255 
+             L1196 261 
+             C1182 264 1170 268 1158 274 
+             C1146 280 1138 290 1133 302 
+             C1128 316 1132 332 1136 348 Z"/>
+    
+    <!-- Secondary twisting branch -->
+    <path fill="#0b0f16"
+          d="M1124 300 C1112 292 1100 286 1088 284 L1087 279 C1101 281 1114 287 1126 295 Z"/>
+    
+    <!-- Dense layered pine needle clouds (Tiered matsutake clouds) -->
+    <!-- Lower branch needle cluster -->
+    <ellipse cx="1082" cy="281" rx="28" ry="11" fill="url(#pineGrad)"/>
+    <ellipse cx="1068" cy="278" rx="18" ry="8" fill="#1b232f"/>
+    <!-- Moonlit needle highlights -->
+    <path d="M1060 274 Q1082 270 1104 274" stroke="#7e94ac" stroke-width="1.2" fill="none" opacity="0.4"/>
+
+    <!-- Mid branch clusters -->
+    <ellipse cx="1145" cy="264" rx="34" ry="12" fill="url(#pineGrad)"/>
+    <ellipse cx="1178" cy="256" rx="36" ry="13" fill="url(#pineGrad)"/>
+    <ellipse cx="1205" cy="250" rx="26" ry="10" fill="#141c26"/>
+    <!-- Moonlit highlights -->
+    <path d="M1125 258 Q1150 252 1175 258" stroke="#8fa4be" stroke-width="1.4" fill="none" opacity="0.45"/>
+    <path d="M1160 250 Q1185 244 1210 250" stroke="#8fa4be" stroke-width="1.4" fill="none" opacity="0.5"/>
+
+    <!-- Top canopy cluster -->
+    <ellipse cx="1162" cy="242" rx="25" ry="9" fill="url(#pineGrad)"/>
+    <path d="M1146 238 Q1162 234 1178 238" stroke="#a0b5d0" stroke-width="1.2" fill="none" opacity="0.4"/>
+  </g>
+
+  <!-- ==================== DISTANT TORII GATE ====================
+       Placed on a mid-ground hillock at x=640, subtly lit by lunar ambient light.
+  -->
+  <g id="distant-torii" fill="url(#toriiVermilion)">
+    <!-- Main pillars (Hashira) with outward lean -->
+    <path d="M635 292 L632 344 H637 L639 292 Z"/>
+    <path d="M685 292 L683 344 H688 L689 292 Z"/>
+    <!-- Kasagi (Curved top lintel with upward flared ends) -->
+    <path d="M622 288 Q660 282 702 288 L700 292 Q660 287 624 292 Z"/>
+    <!-- Shimaki & Nuki (Secondary horizontal crossbeams) -->
+    <rect x="628" y="293" width="66" height="3" rx="0.5"/>
+    <rect x="632" y="303" width="58" height="2.5" rx="0.5"/>
+    <!-- Gakuzuka (Center tablet) -->
+    <rect x="659" y="294" width="4" height="9" fill="#141822"/>
+    <!-- Moonlit rim on Torii top -->
+    <path d="M623 287 Q660 282 701 287" stroke="#e9e2d2" stroke-width="0.9" fill="none" opacity="0.3"/>
+  </g>
+
+  <!-- ==================== FIVE-STORY PAGODA (GOJUNOTO) ====================
+       Far right mountain ridge (x=1290 - 1380), completing the feudal Japanese horizon.
+  -->
+  <g id="pagoda" fill="url(#pagodaWood)">
+    <!-- Base foundation -->
+    <path d="M1310 295 H1370 V325 H1310 Z"/>
+    
+    <!-- Tier 1 -->
+    <path d="M1292 292 Q1340 284 1388 292 L1384 295 Q1340 288 1296 295 Z"/>
+    <rect x="1314" y="278" width="52" height="15"/>
+    
+    <!-- Tier 2 -->
+    <path d="M1298 276 Q1340 270 1382 276 L1378 279 Q1340 273 1302 279 Z"/>
+    <rect x="1318" y="262" width="44" height="15"/>
+    
+    <!-- Tier 3 -->
+    <path d="M1304 260 Q1340 255 1376 260 L1372 263 Q1340 258 1308 263 Z"/>
+    <rect x="1322" y="247" width="36" height="14"/>
+
+    <!-- Tier 4 -->
+    <path d="M1310 245 Q1340 241 1370 245 L1367 248 Q1340 244 1313 248 Z"/>
+    <rect x="1326" y="234" width="28" height="12"/>
+
+    <!-- Tier 5 & Spire (Sorin) -->
+    <path d="M1316 232 Q1340 229 1364 232 L1361 235 Q1340 232 1319 235 Z"/>
+    <!-- Pagoda Spire needle with rings -->
+    <line x1="1340" y1="205" x2="1340" y2="232" stroke="#252d3a" stroke-width="2.5"/>
+    <circle cx="1340" cy="204" r="2.5" fill="#c49a45"/>
+    <circle cx="1340" cy="212" r="3" fill="#252d3a"/>
+    <circle cx="1340" cy="218" r="3" fill="#252d3a"/>
+
+    <!-- Soft amber candlelit lattice windows -->
+    <rect x="1334" y="282" width="4" height="6" rx="0.5" fill="#f0b246" opacity="0.75"/>
+    <rect x="1342" y="282" width="4" height="6" rx="0.5" fill="#f0b246" opacity="0.65"/>
+    <rect x="1335" y="266" width="3.5" height="5" rx="0.5" fill="#f0b246" opacity="0.55"/>
+    <rect x="1341" y="266" width="3.5" height="5" rx="0.5" fill="#f0b246" opacity="0.5"/>
+    <rect x="1337" y="251" width="3" height="4" rx="0.5" fill="#f0b246" opacity="0.45"/>
+  </g>
+</svg>

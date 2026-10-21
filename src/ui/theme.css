@@ -28,9 +28,22 @@
   --ls-err-bg: rgba(239, 91, 107, 0.13);
   --ls-info-bg: rgba(233, 226, 210, 0.06);
 
-  --ls-radius-sm: 4px;
-  --ls-radius: 8px;
-  --ls-radius-lg: 14px;
+  /* Parchment: muted bone paper, not cream. Ink lines do the bordering; gold is
+     only ever a small accent. */
+  --ls-paper: #e4e0d6;
+  --ls-paper-alt: #d8d3c6;
+  --ls-paper-edge: #b9b3a4;
+  --ls-ink: #17181a;
+  --ls-ink-muted: #55534b;
+  --ls-ink-ok: #1d6b4c;
+  --ls-ink-warn: #6f5a1f;
+  --ls-ink-err: #9b1c28;
+  --ls-ink-accent: #a51c28;
+  --ls-ink-line: rgba(23, 24, 26, 0.26);
+
+  --ls-radius-sm: 3px;
+  --ls-radius: 6px;
+  --ls-radius-lg: 8px;
   --ls-gap: 14px;
   --ls-focus: 2px solid var(--ls-accent);
 
@@ -68,6 +81,16 @@
   --ls-err: #9b1c28;
   --ls-err-bg: rgba(155, 28, 40, 0.09);
   --ls-info-bg: rgba(26, 28, 32, 0.05);
+  --ls-paper: #f6f3ea;
+  --ls-paper-alt: #ece7da;
+  --ls-paper-edge: #c9c2b1;
+  --ls-ink: #1a1c20;
+  --ls-ink-muted: #5c5a53;
+  --ls-ink-ok: #1d6b4c;
+  --ls-ink-warn: #6f5a1f;
+  --ls-ink-err: #9b1c28;
+  --ls-ink-accent: #9d1c28;
+  --ls-ink-line: rgba(26, 28, 32, 0.24);
   --ls-shadow: 0 10px 26px rgba(70, 58, 38, 0.16);
   --ls-shadow-soft: 0 2px 8px rgba(70, 58, 38, 0.12);
   --ls-glow: 0 0 14px rgba(179, 35, 48, 0.2);
@@ -268,6 +291,76 @@ a:hover {
 
 .ls-card--tight {
   padding: 10px 14px;
+}
+
+/* Parchment surfaces. The token remap makes every nested component (badges,
+   seals, buttons, inputs) ink-on-paper without extra markup; `ls-paper` also
+   paints the surface, while `ls-paper-tokens` only remaps, for containers whose
+   children carry the paper themselves (lists, journals). */
+.ls-paper,
+.ls-paper-tokens {
+  --ls-text: var(--ls-ink);
+  --ls-muted: var(--ls-ink-muted);
+  --ls-accent: var(--ls-ink-accent);
+  --ls-accent-strong: var(--ls-ink-accent);
+  --ls-ok: var(--ls-ink-ok);
+  --ls-warn: var(--ls-ink-warn);
+  --ls-err: var(--ls-ink-err);
+  --ls-border: var(--ls-ink-line);
+  --ls-border-strong: color-mix(in srgb, var(--ls-ink) 42%, transparent);
+  --ls-surface: var(--ls-paper);
+  --ls-surface-alt: var(--ls-paper-alt);
+  --ls-info-bg: color-mix(in srgb, var(--ls-ink) 7%, transparent);
+  --ls-ok-bg: color-mix(in srgb, var(--ls-ink-ok) 12%, transparent);
+  --ls-warn-bg: color-mix(in srgb, var(--ls-ink-warn) 13%, transparent);
+  --ls-err-bg: color-mix(in srgb, var(--ls-ink-err) 10%, transparent);
+  --ls-glow: 0 0 10px rgba(165, 28, 40, 0.18);
+  --ls-shadow: 0 1px 2px rgba(40, 32, 18, 0.16), 0 8px 20px rgba(40, 32, 18, 0.08);
+}
+
+.ls-paper {
+  background-color: var(--ls-paper);
+  background-image: url('art/paper-grain.svg');
+  background-size: 120px 120px;
+  color: var(--ls-text);
+  border: 1px solid var(--ls-border);
+}
+
+/* On paper, chips are stamped in ink rather than filled: an outline, a hairline
+   inner rule, and no colour wash. This is what keeps the cards from reading as
+   coloured boxes. */
+.ls-paper .ls-badge,
+.ls-paper-tokens .ls-badge {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, currentColor 44%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 13%, transparent);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.ls-paper .ls-btn:not(.ls-btn--primary),
+.ls-paper-tokens .ls-btn:not(.ls-btn--primary) {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--ls-ink) 30%, transparent);
+}
+
+.ls-paper .ls-btn-easy,
+.ls-paper-tokens .ls-btn-easy {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--ls-ok) 55%, transparent);
+}
+
+.ls-paper .ls-btn-hard,
+.ls-paper-tokens .ls-btn-hard {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--ls-warn) 60%, transparent);
+}
+
+.ls-paper .ls-btn-again,
+.ls-paper-tokens .ls-btn-again {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--ls-err) 55%, transparent);
 }
 
 .ls-row {
@@ -556,11 +649,24 @@ table.ls-table tbody tr:hover td {
 
 /* -------------------------------------------------------------------- tabs */
 
+/* `overflow-x: auto` promotes overflow-y to auto, which produced a 1px vertical
+   scrollbar on the tab strip. Pin it to hidden and drop the scrollbar chrome, so
+   narrow screens scroll horizontally by intent and nothing else. */
 .ls-tabs {
   display: flex;
   gap: 2px;
   overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 1px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   border-bottom: 1px solid var(--ls-border-strong);
+}
+
+.ls-tabs::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .ls-tab {

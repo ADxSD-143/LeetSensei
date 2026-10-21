@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 420" preserveAspectRatio="none" aria-hidden="true">
+  <!-- Film grain over the plate: one rasterised noise pass, no runtime cost. -->
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/>
+    <feColorMatrix type="saturate" values="0"/>
+  </filter>
+  <filter id="wash" x="-20%" y="-60%" width="140%" height="220%">
+    <feGaussianBlur stdDeviation="34"/>
+  </filter>
+
+  <rect width="1440" height="420" filter="url(#grain)" opacity="0.055"/>
+
+  <!-- Ink wash pooling along the base of the scene. -->
+  <g filter="url(#wash)" opacity="0.16" fill="#05060a">
+    <ellipse cx="380" cy="404" rx="520" ry="52"/>
+    <ellipse cx="1080" cy="412" rx="560" ry="44"/>
+  </g>
+
+  <!-- A few dry brush strokes. -->
+  <g fill="#e9e2d2" opacity="0.05">
+    <path d="M120 96c90-10 190-14 296-11-104 8-206 12-296 11Z"/>
+    <path d="M1080 78c70-7 148-9 230-7-82 6-160 8-230 7Z"/>
+    <path d="M660 132c96-8 200-11 312-8-112 7-216 10-312 8Z"/>
+  </g>
+</svg>

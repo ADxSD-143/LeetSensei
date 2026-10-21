@@ -1,13 +1,59 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
   <defs>
-    <filter id="soften" x="-25%" y="-80%" width="150%" height="260%">
-      <feGaussianBlur stdDeviation="30"/>
+    <!-- Soft gaussian blur filter for natural misty edges -->
+    <filter id="mistBlurDeep" x="-20%" y="-40%" width="140%" height="180%">
+      <feGaussianBlur stdDeviation="24"/>
     </filter>
+
+    <filter id="mistBlurLight" x="-20%" y="-40%" width="140%" height="180%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+
+    <!-- Horizontal drifting gradients with soft feathering -->
+    <linearGradient id="fogDriftA" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#b4c2d4" stop-opacity="0"/>
+      <stop offset="25%" stop-color="#b4c2d4" stop-opacity="0.35"/>
+      <stop offset="60%" stop-color="#cfd8e5" stop-opacity="0.45"/>
+      <stop offset="85%" stop-color="#98a8bc" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#b4c2d4" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="fogDriftB" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8fa0b5" stop-opacity="0"/>
+      <stop offset="35%" stop-color="#dce4ee" stop-opacity="0.3"/>
+      <stop offset="70%" stop-color="#8fa0b5" stop-opacity="0.38"/>
+      <stop offset="100%" stop-color="#8fa0b5" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Warm moonlit mist gradient -->
+    <linearGradient id="lunarMist" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fffaee" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#f5ede0" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#fffaee" stop-opacity="0"/>
+    </linearGradient>
   </defs>
-  <g filter="url(#soften)">
-    <ellipse cx="360" cy="344" rx="520" ry="64" fill="#8b93a3" opacity="0.16"/>
-    <ellipse cx="980" cy="384" rx="600" ry="74" fill="#8b93a3" opacity="0.13"/>
-    <ellipse cx="700" cy="300" rx="380" ry="44" fill="#e9e2d2" opacity="0.05"/>
-    <ellipse cx="1240" cy="330" rx="320" ry="52" fill="#e63946" opacity="0.05"/>
+
+  <!-- Deep ground valley fog layer -->
+  <g filter="url(#mistBlurDeep)">
+    <!-- Base misty blanket across the valley floor -->
+    <path d="M0 340 Q360 310 720 335 T1440 330 V420 H0 Z" fill="#68788c" opacity="0.4"/>
+    <!-- Moonlit fog puff rising in center-right -->
+    <ellipse cx="880" cy="355" rx="420" ry="48" fill="url(#lunarMist)"/>
+    <!-- Left foreground mist basin -->
+    <ellipse cx="320" cy="365" rx="380" ry="42" fill="#7d8ea4" opacity="0.35"/>
+  </g>
+
+  <!-- Flowing dynamic vapor trails (drifted cleanly via CSS animations) -->
+  <g filter="url(#mistBlurLight)">
+    <!-- Vapor trail 1: Across mountain mid-ground -->
+    <path d="M-60 305 Q300 280 660 300 T1380 295 Q1500 305 1600 300" 
+          stroke="url(#fogDriftA)" stroke-width="32" fill="none" opacity="0.7"/>
+
+    <!-- Vapor trail 2: Hugging the foreground cliff edge beneath the ronin -->
+    <path d="M120 350 Q480 325 840 342 T1560 335" 
+          stroke="url(#fogDriftB)" stroke-width="26" fill="none" opacity="0.65"/>
+
+    <!-- Vapor trail 3: Low wisp skimming the bottom -->
+    <ellipse cx="940" cy="385" rx="360" ry="22" fill="url(#fogDriftA)" opacity="0.5"/>
   </g>
 </svg>

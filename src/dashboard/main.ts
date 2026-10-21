@@ -3,8 +3,9 @@ import type { ReviewRating } from '../core/model';
 import type { DueState } from '../core/schedule';
 import type { RevisionStore } from '../core/revisions';
 import type { PendingJob } from '../storage/repository';
-import { XP_BY_RATING } from '../core/progress';
+import { RANKS, XP_BY_RATING } from '../core/progress';
 import { errorMessage, openPage, send } from '../ui/api';
+import { readOverviewResponse } from '../ui/overview-guard';
 import {
   applyTheme,
   badge,
@@ -29,12 +30,6 @@ import {
  * never drift from the data. All text is set as text content.
  */
 
-interface OverviewResponse {
-  overview: Overview;
-  pending: PendingJob | null;
-  revisions: RevisionStore;
-}
-
 type TabId = 'problems' | 'reviews' | 'conflicts' | 'history';
 
 interface Filters {
@@ -46,6 +41,12 @@ interface Filters {
 
 const header = qs<HTMLElement>('#header');
 const app = qs<HTMLElement>('#app');
+
+// A restored scroll position would hide the hero on open, so this page always
+// starts at the top.
+if ('scrollRestoration' in window.history) {
+  window.history.scrollRestoration = 'manual';
+}
 
 const filters: Filters = { query: '', tag: '', language: '', due: 'all' };
 let activeTab: TabId = 'problems';
@@ -236,15 +237,28 @@ function heroArt(): HTMLElement {
       attrs: { src: `art/${file}`, alt: '', 'aria-hidden': 'true', decoding: 'async' },
     });
 
+  // DOM order is paint order: texture, moon, ridges, mid-fog, temple, ronin, fore-fog.
   return el('div', {
     className: 'ls-hero__art',
     attrs: { 'aria-hidden': 'true' },
     children: [
+      layer('ink-texture.svg', 'ls-hero__layer--texture'),
       layer('hero-moon.svg', 'ls-hero__layer--moon'),
       layer('hero-ridges.svg', 'ls-hero__layer--ridges'),
+      layer('hero-fog.svg', 'ls-hero__layer--fog-mid'),
+      layer('hero-temple.svg', 'ls-hero__layer--temple'),
       layer('hero-ronin.svg', 'ls-hero__layer--ronin'),
-      layer('hero-fog.svg', 'ls-hero__layer--fog'),
+      layer('hero-fog.svg', 'ls-hero__layer--fog-fore'),
     ],
+  });
+}
+
+/** Sparse drifting motes. Pure CSS, and hidden when motion is reduced. */
+function motesLayer(): HTMLElement {
+  return el('div', {
+    className: 'ls-hero__motes',
+    attrs: { 'aria-hidden': 'true' },
+    children: [el('span'), el('span'), el('span'), el('span'), el('span'), el('span')],
   });
 }
 
@@ -274,6 +288,13 @@ function hero(overview: Overview): HTMLElement {
     attrs: { 'aria-label': 'Today' },
     children: [
       heroArt(),
+      motesLayer(),
+      el('div', { className: 'ls-hero__moonlight', attrs: { 'aria-hidden': 'true' } }),
+      el('div', {
+        className: 'ls-hero__glint',
+        attrs: { 'aria-hidden': 'true' },
+        children: [el('div', { className: 'ls-hero__glint-shimmer' })],
+      }),
       el('div', {
         className: 'ls-hero__content',
         children: [
@@ -322,7 +343,98 @@ function hero(overview: Overview): HTMLElement {
   });
 }
 
-// --------------------------------------------------------------- status panel
+function rankModal(currentRank: string): HTMLElement {
+  const overlay = el('div', {
+    className: 'ls-modal-overlay',
+    attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Rank System' },
+  });
+
+  const closeBtn = el('button', {
+    className: 'ls-modal__close',
+    text: '✕',
+    attrs: { type: 'button', 'aria-label': 'Close rank system info' },
+  });
+
+  const dismiss = (): void => overlay.remove();
+  closeBtn.addEventListener('click', dismiss);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) dismiss();
+  });
+
+  const rankRows = RANKS.map((r, i) => {
+    const isCurrent = r.name.toLowerCase() === currentRank.toLowerCase();
+    const nextRank = RANKS[i + 1];
+    const thresholdText = nextRank
+      ? `${r.minXp} – ${nextRank.minXp - 1} XP`
+      : `${r.minXp}+ XP (Mastery)`;
+
+    return el('div', {
+      className: `ls-rank-ladder__row${isCurrent ? ' ls-rank-ladder__row--active' : ''}`,
+      children: [
+        el('div', {
+          className: 'ls-rank-ladder__badge-col',
+          children: [
+            el('span', { className: 'ls-rank-ladder__level', text: `Lv.${i + 1}` }),
+            el('strong', { className: 'ls-rank-ladder__name', text: r.name }),
+            isCurrent
+              ? el('span', { className: 'ls-tag-badge', text: '現在 Current' })
+              : el('span'),
+          ],
+        }),
+        el('div', { className: 'ls-rank-ladder__xp', text: thresholdText }),
+      ],
+    });
+  });
+
+  const modalBox = el('div', {
+    className: 'ls-modal ls-stack',
+    children: [
+      el('div', {
+        className: 'ls-modal__header',
+        children: [
+          el('div', {
+            children: [
+              el('span', { className: 'ls-modal__sub', text: '階級道場 · RANK SYSTEM' }),
+              el('h2', { className: 'ls-modal__title', text: 'Dojo Ranks & Progression' }),
+            ],
+          }),
+          closeBtn,
+        ],
+      }),
+      el('div', {
+        className: 'ls-modal__body ls-stack',
+        children: [
+          el('p', {
+            className: 'ls-small ls-muted',
+            text: 'XP is earned by recording spaced-repetition reviews in your local study journal. Progression is deterministic, local, and recomputed directly from your review history.',
+          }),
+          el('div', {
+            className: 'ls-xp-rates',
+            children: [
+              el('div', { className: 'ls-xp-pill', text: '易 Easy Review: +5 XP' }),
+              el('div', { className: 'ls-xp-pill', text: '難 Hard Review: +3 XP' }),
+              el('div', { className: 'ls-xp-pill', text: '再 Again: +1 XP' }),
+            ],
+          }),
+          el('div', {
+            className: 'ls-rank-ladder',
+            children: rankRows,
+          }),
+        ],
+      }),
+    ],
+  });
+
+  overlay.append(modalBox);
+  return overlay;
+}
+
+function showRankModal(currentRank: string): void {
+  const modal = rankModal(currentRank);
+  document.body.append(modal);
+}
+
+// ------------------------------------------------------------- status panel
 
 function statusPanel(overview: Overview): HTMLElement {
   const progress = overview.progress;
@@ -372,6 +484,16 @@ function statusPanel(overview: Overview): HTMLElement {
       ],
     });
 
+  const aboutRankBtn = el('button', {
+    className: 'ls-btn ls-btn--small ls-btn--rank-info',
+    attrs: { type: 'button', 'aria-haspopup': 'dialog' },
+    children: [
+      el('span', { className: 'ls-btn__icon', text: '⛩️', attrs: { 'aria-hidden': 'true' } }),
+      el('span', { text: 'About Rank' }),
+    ],
+  });
+  aboutRankBtn.addEventListener('click', () => showRankModal(progress.rank));
+
   const syncLine = [
     overview.connected
       ? `${overview.login ?? 'GitHub'}${overview.repo ? ` · ${overview.repo.owner}/${overview.repo.repo}@${overview.repo.branch}` : ' · no repository selected'}`
@@ -396,9 +518,14 @@ function statusPanel(overview: Overview): HTMLElement {
               el('div', {
                 className: 'ls-level__body',
                 children: [
-                  el('span', { className: 'ls-level__rank', text: progress.rank }),
+                  el('div', {
+                    className: 'ls-row ls-row--align-center',
+                    children: [
+                      el('span', { className: 'ls-level__rank', text: progress.rank }),
+                      aboutRankBtn,
+                    ],
+                  }),
                   el('span', { className: 'ls-level__next', text: rankLine }),
-                  el('span', { className: 'ls-level__next', text: `${progress.xp} XP total` }),
                 ],
               }),
             ],
@@ -449,7 +576,7 @@ function questCard(problem: ProblemSummary): HTMLElement {
           ? ' ls-quest--upcoming'
           : '';
 
-  const card = el('article', { className: `ls-quest ls-tilt${modifier}` });
+  const card = el('article', { className: `ls-quest ls-paper ls-tilt${modifier}` });
 
   const title: HTMLElement =
     problem.url !== ''
@@ -748,7 +875,7 @@ function reviewQueue(overview: Overview): HTMLElement {
           group.rows.length === 0
             ? el('div', { className: 'ls-small ls-muted', text: 'Nothing here.' })
             : el('ul', {
-                className: 'ls-list',
+                className: 'ls-list ls-paper-tokens',
                 children: group.rows.map((row) => reviewRow(row)),
               }),
         ],
@@ -789,7 +916,7 @@ function conflictsPanel(pending: PendingJob | null): HTMLElement {
     });
   }
 
-  const list = el('ul', { className: 'ls-list' });
+  const list = el('ul', { className: 'ls-list ls-paper-tokens' });
   for (const conflict of pending.conflicts) {
     const actions = el('div', { className: 'ls-actions' });
     for (const [decision, label, variant] of [
@@ -892,7 +1019,7 @@ function journalPanel(revisions: RevisionStore, overview: Overview): HTMLElement
   events.sort((left, right) => (left.at > right.at ? -1 : 1));
 
   return el('div', {
-    className: 'ls-journal',
+    className: 'ls-journal ls-paper',
     children: events.slice(0, 200).map((event) =>
       el('div', {
         className: 'ls-journal__row',
@@ -919,35 +1046,56 @@ function journalPanel(revisions: RevisionStore, overview: Overview): HTMLElement
 // -------------------------------------------------------------------- motion
 
 function wireHeroMotion(section: HTMLElement): void {
-  if (reducedMotion() || !finePointer()) return;
+  if (reducedMotion()) return;
 
-  let frame = 0;
-  let nextX = 0;
-  let nextY = 0;
+  let height = section.getBoundingClientRect().height || 1;
+  let pointerX = 0;
+  let pointerY = 0;
 
-  const apply = (): void => {
-    frame = 0;
-    section.style.setProperty('--px', nextX.toFixed(3));
-    section.style.setProperty('--py', nextY.toFixed(3));
-  };
-
-  const schedule = (): void => {
-    if (frame === 0) frame = window.requestAnimationFrame(apply);
-  };
-
-  section.addEventListener('pointermove', (event) => {
-    const rect = section.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return;
-    nextX = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
-    nextY = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
-    schedule();
+  window.addEventListener('resize', () => {
+    height = section.getBoundingClientRect().height || 1;
   });
 
-  section.addEventListener('pointerleave', () => {
-    nextX = 0;
-    nextY = 0;
-    schedule();
-  });
+  const write = (): void => {
+    // Depth from scroll position, so the scene has depth even when the pointer
+    // is still, and on touch devices where there is no hover at all.
+    const drift = Math.max(-1, Math.min(1, (window.scrollY / height) * 1.6));
+    section.style.setProperty('--px', pointerX.toFixed(3));
+    section.style.setProperty('--py', (pointerY + drift).toFixed(3));
+  };
+
+  // Written straight from the scroll event: no animation-frame dependency, so it
+  // responds immediately and cannot be dropped when frames are not being produced.
+  window.addEventListener('scroll', write, { passive: true });
+  write();
+
+  // Pointer parallax is a bonus on devices that actually have a hovering pointer,
+  // and it is high frequency, so that part is batched to one write per frame.
+  if (finePointer()) {
+    let frame = 0;
+    const schedule = (): void => {
+      if (frame === 0) {
+        frame = window.requestAnimationFrame(() => {
+          frame = 0;
+          write();
+        });
+      }
+    };
+
+    section.addEventListener('pointermove', (event) => {
+      const rect = section.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      pointerX = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
+      pointerY = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
+      schedule();
+    });
+
+    section.addEventListener('pointerleave', () => {
+      pointerX = 0;
+      pointerY = 0;
+      schedule();
+    });
+  }
 }
 
 function wireTilt(cards: readonly HTMLElement[]): void {
@@ -1019,7 +1167,12 @@ function tabButton(id: TabId, count?: number): HTMLButtonElement {
   return node;
 }
 
-function render(overview: Overview, pending: PendingJob | null, revisions: RevisionStore): void {
+function render(
+  overview: Overview,
+  pending: PendingJob | null,
+  revisions: RevisionStore,
+  staleProducer = false,
+): void {
   applyTheme(overview.settings.theme);
   renderHeader(overview);
   clear(app);
@@ -1076,8 +1229,16 @@ function render(overview: Overview, pending: PendingJob | null, revisions: Revis
         )
       : null;
 
+  const staleNote = staleProducer
+    ? note(
+        'This dashboard is newer than the running extension background, so rank, XP and streak were recomputed from your local review history. Reload LeetSensei in the extensions page to finish updating.',
+        'warn',
+      )
+    : null;
+
   app.append(heroSection, status);
   if (orphanNote !== null) app.append(orphanNote);
+  if (staleNote !== null) app.append(staleNote);
   app.append(tabs, panel);
 
   wireHeroMotion(heroSection);
@@ -1088,6 +1249,8 @@ function render(overview: Overview, pending: PendingJob | null, revisions: Revis
     app.dataset.entered = 'true';
   } else {
     hasRevealed = true;
+    // Guarantees the hero is on screen the moment the dashboard opens.
+    window.scrollTo(0, 0);
     window.requestAnimationFrame(() => {
       app.dataset.entered = 'true';
     });
@@ -1098,8 +1261,9 @@ async function refresh(): Promise<void> {
   app.setAttribute('aria-busy', 'true');
   if (app.childElementCount === 0) app.append(loadingState());
   try {
-    const response = await send<OverviewResponse>({ type: 'data/overview' });
-    render(response.overview, response.pending, response.revisions);
+    const response = await send<unknown>({ type: 'data/overview' });
+    const guarded = readOverviewResponse(response, new Date());
+    render(guarded.overview, guarded.pending, guarded.revisions, guarded.recoveredProgress);
   } catch (error) {
     clear(app);
     app.setAttribute('aria-busy', 'false');
