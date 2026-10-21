@@ -13,14 +13,16 @@
     "build": "node scripts/build.mjs",
     "build:chrome": "node scripts/build.mjs --browser=chrome",
     "build:firefox": "node scripts/build.mjs --browser=firefox",
+    "build:review": "node scripts/build.mjs --no-minify",
     "package": "node scripts/build.mjs --zip",
+    "verify:dist": "node scripts/verify-dist.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build"
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build && npm run verify:dist"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

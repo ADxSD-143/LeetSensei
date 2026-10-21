@@ -4,6 +4,7 @@
 //   node scripts/build.mjs                  # both browsers, production
 //   node scripts/build.mjs --browser=chrome # one browser
 //   node scripts/build.mjs --watch          # rebuild on change (chrome)
+//   node scripts/build.mjs --no-minify      # readable output, for store source review
 //   node scripts/build.mjs --zip            # also produce release archives
 import { build, context } from 'esbuild';
 import { cp, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
@@ -34,7 +35,7 @@ for (const browser of browsers) {
   }
 }
 
-const pkg = JSON.parse(await readFileJson(join(ROOT, 'package.json')));
+const pkg = await readFileJson(join(ROOT, 'package.json'));
 const githubClientId = process.env.LEETSENSEI_GITHUB_CLIENT_ID ?? '';
 
 /** Extension entry points, bundled as classic scripts (no ES module output). */
@@ -62,7 +63,7 @@ async function readFileJson(path) {
   return JSON.parse(await readFile(path, 'utf8'));
 }
 
-function esbuildOptions(browser, outdir, production) {
+function esbuildOptions(browser, outdir, minify) {
   return {
     entryPoints: Object.fromEntries(
       Object.entries(ENTRIES).map(([name, path]) => [name, join(ROOT, path)]),
@@ -72,8 +73,8 @@ function esbuildOptions(browser, outdir, production) {
     format: 'iife',
     target: browser === 'firefox' ? ['firefox115'] : ['chrome111'],
     platform: 'browser',
-    sourcemap: production ? false : 'inline',
-    minify: production,
+    sourcemap: minify ? false : 'inline',
+    minify,
     legalComments: 'none',
     logLevel: 'warning',
     define: {
@@ -100,12 +101,12 @@ async function copyStatic(outdir) {
   return copied;
 }
 
-async function buildBrowser(browser, production) {
+async function buildBrowser(browser, minify) {
   const outdir = join(DIST, browser);
   await rm(outdir, { recursive: true, force: true });
   await mkdir(outdir, { recursive: true });
 
-  const options = esbuildOptions(browser, outdir, production);
+  const options = esbuildOptions(browser, outdir, minify);
   if (watch) {
     const ctx = await context(options);
     await ctx.watch();
@@ -154,9 +155,10 @@ function archive(target) {
 }
 
 const production = !watch;
+const minify = production && !flag('no-minify');
 const targets = [];
 for (const browser of browsers) {
-  targets.push(await buildBrowser(browser, production));
+  targets.push(await buildBrowser(browser, minify));
 }
 
 if (!watch && zip) {

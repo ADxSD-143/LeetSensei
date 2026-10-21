@@ -1,6 +1,9 @@
 # LeetSensei — Technical Design Document
 
-**Status:** Proposed design; implementation has not started.
+**Status:** implemented. This document records the locked design decisions. Where the
+implementation had to choose a concrete answer, the choice is recorded under
+[Resolved decisions](#resolved-decisions) and the code is the source of truth. See
+[ARCHITECTURE.md](ARCHITECTURE.md) for how the modules actually fit together.
 
 ## Product
 
@@ -176,6 +179,37 @@ Local browser storage is primary. Back up changes to `.leetcode-tracker/revision
 5. **Browser differences:** isolate APIs and test packaging/signing early.
 6. **Tag changes:** preserve historical copies by default.
 
-## Decisions before release
+## Resolved decisions
 
-Finalize build framework/manifest, GitHub authorization flow and scopes, reliable LeetCode adapter, per-language filenames, precise interval algorithm, backup conflict UX, data retention, browser versions and store submission requirements.
+Every item that was previously open. Each is implemented and covered by tests.
+
+| Open question                         | Decision                                                                                                                                                                                    | Where                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Build framework and manifest strategy | TypeScript + esbuild, classic `iife` bundles, one shared manifest builder emitting Chrome (`service_worker`) and Firefox (`background.scripts`) MV3 manifests                               | `scripts/build.mjs`, `src/manifest/build-manifest.ts`   |
+| GitHub authorization flow             | OAuth **device flow** (public `client_id`, no client secret, no exchange service), with a fine-grained personal access token as a user-supplied fallback                                    | `src/github/auth.ts`                                    |
+| GitHub scopes                         | `public_repo` by default; `repo` only when the user explicitly selects a private destination                                                                                                | `src/storage/settings.ts`, options page                 |
+| LeetCode extraction mechanism         | Verdict read from the live DOM as the _trigger_; code, language, difficulty, id and tags read from LeetCode's GraphQL API as a same-origin request. Accepted is asserted twice              | `src/adapters/leetcode/*`                               |
+| Per-language file names               | `solution.<ext>`, one file per language extension; languages accumulate across submissions, and two languages sharing an extension resolve through the canonical id                         | `src/core/language.ts`, `src/core/plan.ts`              |
+| Revision interval algorithm           | Ladder of days (default 1, 3, 7, 14, 30): **Again** resets to the shortest, **Hard** keeps, **Easy** advances one step and doubles past the end, capped at 365 days                         | `src/core/schedule.ts`                                  |
+| Version file naming                   | UTC `YYYYMMDD-HHMMSS` stamp from the submission time, inserted before the extension (`solution.20240305-060708.py`), with a deterministic `-2`, `-3` suffix on collision                    | `src/core/paths.ts`                                     |
+| Conflict data for decisions           | Repository content is fetched lazily, only when "Save version" is chosen, so a decision needs no extra download                                                                             | `src/core/resolve.ts`                                   |
+| Restore conflicts (local vs remote)   | Per problem: the record with the later `lastReviewedAt` wins for revisions; the later `updatedAt` wins for manifest entries. Local wins ties                                                | `SyncCoordinator.restoreFromRemote`                     |
+| Manifest and revision schemas         | `schemaVersion` 1, strict validation, versionless data migrated on load, newer versions refused, corrupt data degraded to empty with a warning                                              | `src/core/manifest.ts`, `src/core/revisions.ts`         |
+| Tracker file ownership                | `.leetcode-tracker/*` is machine state, so a difference never blocks a sync; every other path uses the full conflict flow                                                                   | `src/core/conflicts.ts` (`owned`)                       |
+| Retry policy                          | Retry only `network_error`, `rate_limited` and `remote_changed`; exponential backoff capped at 30s; `retry-after` honoured; authorization, validation and not-found errors fail immediately | `src/github/client.ts`, `src/github/commit.ts`          |
+| Unverified writes                     | A commit that cannot be confirmed on the branch is reported as `verified: false`; local state is not advanced, and a retry converges because the operation is idempotent                    | `src/github/commit.ts`, `src/background/coordinator.ts` |
+| Untagged submissions                  | Filed under a configurable fallback category (default `Uncategorized`), flagged `metadataIncomplete`, and stated in the README — no tags are invented                                       | `src/core/normalize.ts`                                 |
+| Missing problem id                    | The folder is named from the title slug alone and the record is flagged incomplete, rather than inventing a number                                                                          | `src/core/slug.ts`                                      |
+| Supported language list               | An explicit ~40-entry table; an unknown language is refused with a named error, never guessed                                                                                               | `src/core/language.ts`                                  |
+| Browser versions                      | Chrome/Brave 111+, Firefox 115+                                                                                                                                                             | `src/manifest/build-manifest.ts`                        |
+| Store submission                      | Not started. Requires maintainer accounts, signing and review; requirements are recorded in [BROWSER_COMPATIBILITY.md](BROWSER_COMPATIBILITY.md)                                            | —                                                       |
+
+## Still open
+
+1. **Verdict-detection resilience.** The DOM trigger is unit tested but not live-verified, and
+   a LeetCode markup change would need a predicate update. The manual smoke test in
+   [TESTING.md](TESTING.md#manual-browser-test-procedure-not-yet-performed) is the next step.
+2. **Automated browser end-to-end tests.** Deferred with reasoning in
+   [TESTING.md](TESTING.md#what-is-not-covered).
+3. **Multi-device revision merging.** Restore currently resolves per problem by recency; a
+   proper merge (union of history) would need a vector or timestamp-based rule.

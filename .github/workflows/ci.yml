@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows is included because path handling and the build script must work there too.
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # `--include=dev` keeps the install correct even if NODE_ENV=production is set.
+      - name: Install dependencies
+        run: npm ci --include=dev
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit and integration tests
+        run: npm test
+
+      - name: Build Chrome and Firefox bundles
+        run: npm run build
+
+      - name: Upload build output
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: leetsensei-dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  # A separate job so a store-facing package can be produced without weakening the
+  # verification job. Archives are build artifacts, never committed.
+  package:
+    name: Package release archives
+    runs-on: ubuntu-latest
+    needs: verify
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --include=dev
+
+      - name: Build and archive
+        run: npm run package
+
+      - name: Upload archives
+        uses: actions/upload-artifact@v4
+        with:
+          name: leetsensei-packages
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 14
