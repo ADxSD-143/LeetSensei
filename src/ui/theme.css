@@ -654,10 +654,16 @@ table.ls-table tbody tr:hover td {
    narrow screens scroll horizontally by intent and nothing else. */
 .ls-tabs {
   display: flex;
+  align-items: stretch;
   gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+  max-height: none;
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 1px;
+  overscroll-behavior-x: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
   border-bottom: 1px solid var(--ls-border-strong);

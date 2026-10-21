@@ -598,7 +598,8 @@
 }
 
 /* Quest cards are bone paper with ink rules: no coloured fills, no tan or gold
-   bordering. Colours come from the `ls-paper` token remap in the markup. */
+   bordering. Colours come from the `ls-paper` token remap in the markup, so both
+   themes resolve correctly; only the paper texture is defined here. */
 .ls-quest {
   position: relative;
   display: flex;
@@ -607,6 +608,17 @@
   padding: 12px 14px;
   border-left: 3px solid var(--ls-ink-line);
   border-radius: 4px;
+  /* Paper sheen plus faint ruled hairlines, from the earlier polish pass. */
+  background-image:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent 48%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(58, 48, 31, 0.018) 0,
+      rgba(58, 48, 31, 0.018) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
   transition:
     border-color 0.16s ease,
     box-shadow 0.16s ease,
@@ -624,7 +636,11 @@
 }
 
 .ls-quest:hover {
-  box-shadow: var(--ls-shadow);
+  border-color: var(--ls-ink-line);
+  box-shadow:
+    0 5px 16px rgba(0, 0, 0, 0.16),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
 }
 
 /* Due state is carried by a restrained crimson edge, not by filling the card. */
@@ -1291,6 +1307,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .ls-hero__art::after {
+    animation: none !important;
+    opacity: 0;
+  }
+
   .ls-hero__layer {
     transform: none !important;
     animation: none !important;
