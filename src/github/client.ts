@@ -152,6 +152,9 @@ export class RestGithubClient implements GithubClient {
 
   constructor(options: RestClientOptions) {
     this.token = options.token;
+    // Stored unbound on purpose: native `fetch` is a WebIDL operation on the
+    // global scope and must never be invoked as a method of this instance.
+    // See `fetchWithTimeout`.
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.apiBase = options.apiBase ?? API_BASE;
     this.maxAttempts = Math.max(1, options.maxAttempts ?? 4);
@@ -178,7 +181,12 @@ export class RestGithubClient implements GithubClient {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
-      return await this.fetchImpl(url, {
+      // Call `fetch` with the global object as its receiver. Writing
+      // `this.fetchImpl(...)` would pass this client as `this`, and the browser
+      // rejects that with "Failed to execute 'fetch' on 'WorkerGlobalScope':
+      // Illegal invocation" because `fetch` is a WebIDL operation defined on the
+      // global scope.
+      return await this.fetchImpl.call(globalThis, url, {
         method,
         headers: this.headers(
           options.body !== undefined,

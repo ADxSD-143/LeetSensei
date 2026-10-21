@@ -11,7 +11,7 @@ Pre-release work only: browser smoke testing, screenshots and store packaging. S
 ## [0.1.0] — 2026-10-21
 
 First working implementation. Everything below is covered by the automated suite
-(407 tests across 27 files); nothing is published to a browser store yet.
+(427 tests across 28 files); nothing is published to a browser store yet.
 
 ### Added
 

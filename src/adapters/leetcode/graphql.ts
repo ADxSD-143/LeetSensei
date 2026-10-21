@@ -88,7 +88,7 @@ async function postGraphql(
   const timer = setTimeout(() => controller.abort(), Math.max(1000, options.timeoutMs ?? 15_000));
   let response: Response;
   try {
-    response = await doFetch(options.endpoint ?? GRAPHQL_ENDPOINT, {
+    response = await doFetch.call(globalThis, options.endpoint ?? GRAPHQL_ENDPOINT, {
       method: 'POST',
       credentials: 'same-origin',
       headers,

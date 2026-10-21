@@ -67,6 +67,50 @@ function makeClient(
   return { client, calls, sleeps };
 }
 
+/**
+ * A fake `fetch` that enforces the same brand check the platform does.
+ *
+ * Native `fetch` is a WebIDL operation on the global scope: invoking it with a
+ * `this` that is neither `undefined` nor the global object throws
+ * "Failed to execute 'fetch' on 'WorkerGlobalScope': Illegal invocation".
+ * A plain function fake accepts any receiver, which is exactly how that bug
+ * reached a real browser, so this stub makes the platform rule testable in Node.
+ */
+function makeBrandCheckedFetch(respond: (request: Recorded) => Response | Promise<Response>) {
+  const calls: Recorded[] = [];
+  const impl = async function brandCheckedFetch(
+    this: unknown,
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ): Promise<Response> {
+    if (this !== undefined && this !== globalThis) {
+      throw new TypeError("Failed to execute 'fetch' on 'WorkerGlobalScope': Illegal invocation");
+    }
+    const url = String(input);
+    const headers = (init?.headers ?? {}) as Record<string, string>;
+    const body = typeof init?.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined;
+    const recorded: Recorded = { method: init?.method ?? 'GET', url, body, headers };
+    calls.push(recorded);
+    return respond(recorded);
+  };
+  return { impl: impl as unknown as typeof fetch, calls };
+}
+
+function makeStrictClient(responses: (request: Recorded) => Response | Promise<Response>): {
+  client: RestGithubClient;
+  calls: Recorded[];
+} {
+  const { impl, calls } = makeBrandCheckedFetch(responses);
+  const client = new RestGithubClient({
+    token: 'gho_test_token_value',
+    fetchImpl: impl,
+    apiBase: 'https://api.example.test',
+    maxAttempts: 1,
+    sleep: async () => undefined,
+  });
+  return { client, calls };
+}
+
 describe('encodeRepoPath', () => {
   it('escapes each segment but keeps the separators', () => {
     expect(encodeRepoPath('Hash-Table/0217-x/solution.py')).toBe('Hash-Table/0217-x/solution.py');
@@ -299,5 +343,93 @@ describe('RestGithubClient', () => {
   it('returns an empty branch list for an unexpected payload', async () => {
     const { client } = makeClient(() => jsonResponse({ not: 'an array' }));
     await expect(client.listBranches(REF)).resolves.toEqual([]);
+  });
+});
+
+/**
+ * Regression tests for the "Illegal invocation" failure seen in Brave when the
+ * options page loaded the repository list.
+ *
+ * The client used to invoke its stored fetch as a method (`this.fetchImpl(...)`),
+ * which passes the client instance as `this`. The browser rejects that for a
+ * WebIDL operation on the global scope, and the error surfaced as
+ * "GitHub request failed: Failed to execute 'fetch' on 'WorkerGlobalScope':
+ * Illegal invocation". Before the fix, both tests below rejected.
+ */
+describe('fetch invocation contract', () => {
+  it('lists repositories without triggering the native fetch brand check', async () => {
+    const { client, calls } = makeStrictClient(() =>
+      jsonResponse([
+        {
+          name: 'solutions',
+          full_name: 'student/solutions',
+          owner: { login: 'student' },
+          permissions: { push: true },
+        },
+      ]),
+    );
+
+    await expect(client.listRepos()).resolves.toHaveLength(1);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('loads branches without triggering the native fetch brand check', async () => {
+    const { client, calls } = makeStrictClient(() =>
+      jsonResponse([{ name: 'main' }, { name: 'solution-sync' }]),
+    );
+
+    await expect(client.listBranches(REF)).resolves.toEqual(['main', 'solution-sync']);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('does the same for every other request path', async () => {
+    // The brand check must hold for reads, writes and the ancestry check alike.
+    const { client } = makeStrictClient((request) => {
+      if (request.url.endsWith('/user')) return jsonResponse({ login: 'student' });
+      if (request.url.includes('/git/commits/')) return jsonResponse({ tree: { sha: 'tree-1' } });
+      if (request.url.includes('/compare/')) return jsonResponse({ status: 'identical' });
+      return jsonResponse({ sha: 'blob-1' });
+    });
+
+    await expect(client.getViewer()).resolves.toMatchObject({ login: 'student' });
+    await expect(client.createBlob(REF, 'x')).resolves.toBe('blob-1');
+    await expect(client.isAncestor(REF, 'commit-1')).resolves.toBe(true);
+  });
+
+  it('sends repository listing on the authenticated path', async () => {
+    const { client, calls } = makeStrictClient(() => jsonResponse([]));
+    await client.listRepos();
+
+    expect(calls[0]).toEqual({
+      method: 'GET',
+      url: 'https://api.example.test/user/repos?per_page=100&sort=updated&affiliation=owner,collaborator',
+      body: undefined,
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: 'Bearer gho_test_token_value',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+  });
+
+  it('sends branch listing on the authenticated path', async () => {
+    const { client, calls } = makeStrictClient(() => jsonResponse([]));
+    await client.listBranches(REF);
+
+    expect(calls[0]).toEqual({
+      method: 'GET',
+      url: 'https://api.example.test/repos/student/solutions/branches?per_page=100',
+      body: undefined,
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: 'Bearer gho_test_token_value',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+  });
+
+  it('still authenticates and maps failures when the brand check is enforced', async () => {
+    const { client } = makeStrictClient(() => textResponse('Bad credentials', 401));
+    await expect(client.listRepos()).rejects.toMatchObject({ code: 'auth_failed' });
   });
 });

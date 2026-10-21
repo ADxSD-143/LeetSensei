@@ -34,7 +34,8 @@ export interface DeviceFlowOptions {
 }
 
 function fetchOf(options: { fetchImpl?: FetchLike }): FetchLike {
-  return options.fetchImpl ?? fetch;
+  const f = options.fetchImpl ?? fetch;
+  return (input, init) => f.call(globalThis, input, init);
 }
 
 async function readJson(response: Response): Promise<Record<string, unknown>> {
@@ -282,7 +283,7 @@ export async function fetchViewer(token: string, fetchImpl?: FetchLike): Promise
   const doFetch = fetchImpl ?? fetch;
   let response: Response;
   try {
-    response = await doFetch(`${API_BASE}/user`, {
+    response = await doFetch.call(globalThis, `${API_BASE}/user`, {
       headers: {
         Accept: 'application/vnd.github+json',
         Authorization: `Bearer ${token}`,

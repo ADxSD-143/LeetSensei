@@ -53,6 +53,9 @@ jobs:
       - name: Build Chrome and Firefox bundles
         run: npm run build
 
+      - name: Verify build output
+        run: npm run verify:dist
+
       - name: Upload build output
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4

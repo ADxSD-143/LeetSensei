@@ -6,7 +6,7 @@ Built with zero runtime dependencies, no telemetry, and no required paid service
 
 > **Status: early MVP, working and tested, not yet published to any browser store.**
 > The sync engine, revision tracker, conflict handling and GitHub integration are
-> implemented and covered by 407 automated tests. See
+> implemented and covered by 427 automated tests. See
 > [Feature status](#feature-status) for exactly what is verified and what is not.
 
 ## What it does
@@ -146,7 +146,7 @@ npm run verify        # format check + lint + typecheck + tests + build
 npm run format        # prettier --write
 npm run lint          # eslint
 npm run typecheck     # tsc --noEmit
-npm test              # vitest run (407 tests)
+npm test              # vitest run (427 tests)
 npm run build         # bundle for Chrome and Firefox
 npm run package       # build and produce dist/<browser>.zip
 npm run icons         # regenerate icons/*.png
@@ -193,7 +193,7 @@ No framework earns its dependency budget here; the DOM helpers in `src/ui` are ~
 npm test
 ```
 
-- **407 tests** across 27 files: unit tests for all core logic, plus integration tests for
+- **427 tests** across 28 files: unit tests for all core logic, plus integration tests for
   the GitHub layers driven by an in-memory GitHub that reproduces content-addressed blobs,
   fast-forward-only ref updates and concurrent pushes.
 - Covered explicitly: Accepted vs non-Accepted, malformed metadata, hashing determinism,

@@ -63,7 +63,7 @@ Legend: `[x]` done and verified · `[~]` implemented, not yet verified in a real
 
 ## Phase 6 — Cross-browser QA and release
 
-- [x] Unit and integration tests (407 tests, no network, no real repository)
+- [x] Unit and integration tests (427 tests, no network, no real repository)
 - [x] Offline, retry, duplicate event, conflict, partial write and unverified write cases
 - [x] Permissions and privacy review recorded in [docs/SECURITY.md](docs/SECURITY.md)
 - [x] Browser-specific installation and compatibility documentation
@@ -110,4 +110,4 @@ Legend: `[x]` done and verified · `[~]` implemented, not yet verified in a real
 | 5   | Sync errors are visible and retryable                                    | ✅ Coded errors surfaced in the popup and dashboard       |
 | 6   | Revision state can be restored from the repository backup                | ✅ Restore flow tested against the in-memory GitHub       |
 | 7   | No telemetry or analytics is sent                                        | ✅ No third-party destination exists in the code          |
-| 8   | Tests cover normalization, conflict handling, retries and revision logic | ✅ 407 tests, 27 files                                    |
+| 8   | Tests cover normalization, conflict handling, retries and revision logic | ✅ 427 tests, 28 files                                    |
