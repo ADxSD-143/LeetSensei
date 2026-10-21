@@ -558,9 +558,23 @@ table.ls-table tbody tr:hover td {
 
 .ls-tabs {
   display: flex;
+  align-items: stretch;
   gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+  max-height: none;
   overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
   border-bottom: 1px solid var(--ls-border-strong);
+}
+
+.ls-tabs::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .ls-tab {
