@@ -59,23 +59,22 @@ happens twice: once against the page verdict and again against the submission re
 | LeetCode submit button + page structure  | **Live-verified**        | The real control is `data-e2e-locator="console-submit-button"`, and no verdict node exists before a submission                                           |
 | LeetCode verdict node after a submission | **Not live-verified**    | It only exists after submitting, which needs an account. Mitigated by scanning every `data-e2e-locator` node                                             |
 | End-to-end sync in a browser             | **Not yet performed**    | Needs a GitHub account and an accepted submission; the procedure is in [docs/TESTING.md](docs/TESTING.md)                                                |
-| Browser-store publication                | **Chrome: prepared**     | 1.0.0 build and listing copy ready; needs the maintainer's accounts, screenshots and review                                                              |
+| Browser-store publication                | **Chrome: prepared**     | 1.0.0 build, listing copy and 1280×800 screenshots ready; needs the maintainer's accounts and review                                                     |
 
 ## Screenshots
 
-Captured from the built extension loaded unpacked in a real Chromium browser
-(Chrome for Testing, dark colour scheme), on a fresh install with nothing connected yet — so
-these show the genuine empty states, not mock-ups:
+Captured from the built extension loaded unpacked in Chromium at 1280×800, dark colour scheme:
 
-| Dashboard                                                 | Options                                               |
-| --------------------------------------------------------- | ----------------------------------------------------- |
-| ![Dashboard, empty state](docs/screenshots/dashboard.png) | ![Options, empty state](docs/screenshots/options.png) |
+| Setup (step 1 of 3)                                        | Dashboard                                                                  |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------- |
+| ![Three-step setup](docs/screenshots/store/01-connect.png) | ![Dashboard with solved problems](docs/screenshots/store/02-dashboard.png) |
 
-![Popup, empty state](docs/screenshots/popup.png)
+![Review queue](docs/screenshots/store/03-review-queue.png)
 
-The colour scheme follows your system preference; these were captured with dark mode active.
-Populated views (problems, review queue, conflicts) are not shown yet because that needs a
-connected GitHub account and a synced submission.
+The setup shot is a genuine fresh install. The two populated shots use **example data** — a
+fictional `example-student` account and repository with synthetic review history — so that no
+personal account appears in the repository. The store listing states the same. Procedure for
+regenerating them: [docs/screenshots/README.md](docs/screenshots/README.md).
 
 ## Requirements
 

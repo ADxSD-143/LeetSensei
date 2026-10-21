@@ -10,6 +10,7 @@
   },
   "scripts": {
     "icons": "node scripts/generate-icons.mjs",
+    "demo-data": "esbuild scripts/demo-data.mjs --bundle --platform=node --format=esm --outfile=dist/demo-data.mjs --log-level=warning && node dist/demo-data.mjs",
     "build": "node scripts/build.mjs",
     "build:chrome": "node scripts/build.mjs --browser=chrome",
     "build:firefox": "node scripts/build.mjs --browser=firefox",

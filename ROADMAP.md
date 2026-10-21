@@ -73,7 +73,7 @@ Legend: `[x]` done and verified · `[~]` implemented, not yet verified in a real
 - [x] Release plumbing: `npm run release` requires a client id, compiles the PAT path out, and verifies the package
 - [x] Privacy policy (`PRIVACY.md`), store listing copy and permission justifications ([docs/STORE_LISTING.md](docs/STORE_LISTING.md)), release runbook ([docs/RELEASE.md](docs/RELEASE.md))
 - [ ] **End-to-end sync in a browser** — needs a GitHub account and an Accepted submission; the next concrete task
-- [ ] Store screenshots at 1280×800 ([docs/screenshots/README.md](docs/screenshots/README.md))
+- [x] Store screenshots at 1280×800, generated from validated example data ([docs/screenshots/README.md](docs/screenshots/README.md))
 - [ ] Load and verify the Firefox bundle the same way
 - [ ] Automated browser end-to-end harness (Playwright with a loaded extension)
 - [ ] Publish packages: Chrome Web Store, Firefox Add-ons

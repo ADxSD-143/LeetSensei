@@ -104,12 +104,12 @@ Chrome Web Store asks a fixed set of questions. Answer them exactly like this.
 
 ## Assets
 
-| Asset            | Requirement                       | Status                                                                                                                                   |
-| ---------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Store icon       | 128×128 PNG                       | `icons/icon-128.png` ✅                                                                                                                  |
-| Screenshots      | 1280×800 or 640×400 PNG/JPEG, 1–5 | **Not yet captured.** The three existing images are 1619×1109 dev captures. Procedure in [screenshots/README.md](screenshots/README.md). |
-| Small promo tile | 440×280 (optional)                | Not produced for 1.0.0                                                                                                                   |
-| Marquee          | 1400×560 (optional)               | Not produced for 1.0.0                                                                                                                   |
+| Asset            | Requirement                       | Status                                                                                                                |
+| ---------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Store icon       | 128×128 PNG                       | `icons/icon-128.png` ✅                                                                                               |
+| Screenshots      | 1280×800 or 640×400 PNG/JPEG, 1–5 | ✅ `docs/screenshots/store/` — three captures at exactly 1280×800, see [screenshots/README.md](screenshots/README.md) |
+| Small promo tile | 440×280 (optional)                | Not produced for 1.0.0                                                                                                |
+| Marquee          | 1400×560 (optional)               | Not produced for 1.0.0                                                                                                |
 
 Screenshots use clearly-labelled example data because a store reviewer cannot sign in to a
 real LeetCode account. Do not present them as a specific user's data, and keep the note in the
