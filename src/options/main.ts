@@ -1149,8 +1149,23 @@ function renderHeader(overview: Overview): void {
         el('div', {
           className: 'ls-brand',
           children: [
-            el('img', { attrs: { src: 'icons/icon-48.png', alt: '' } }),
-            el('span', { text: `LeetSensei ${overview.version}` }),
+            el('img', { attrs: { src: 'icons/icon-48.png', alt: 'LeetSensei' } }),
+            el('div', {
+              className: 'ls-brand-info',
+              children: [
+                el('div', {
+                  className: 'ls-brand-title',
+                  children: [
+                    el('span', { text: 'LeetSensei' }),
+                    el('span', { className: 'ls-tag-badge', text: '設定' }),
+                  ],
+                }),
+                el('div', {
+                  className: 'ls-brand-sub',
+                  text: `環境設定 · Settings v${overview.version}`,
+                }),
+              ],
+            }),
           ],
         }),
         el('div', {

@@ -1,36 +1,113 @@
+/* LeetSensei Dashboard — Japanese Anime & Manga Dojo Style */
+
 .ls-page {
-  max-width: 1100px;
+  max-width: 1160px;
   margin: 0 auto;
-  padding: 24px 16px 48px;
+  padding: 28px 20px 56px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
 #header .ls-brand img {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  box-shadow: 0 0 14px rgba(255, 42, 95, 0.45);
 }
 
+/* Status Dojo Hero Banner */
+.ls-status-hero {
+  border-left: 4px solid var(--ls-accent);
+  background:
+    linear-gradient(135deg, rgba(255, 42, 95, 0.05) 0%, rgba(0, 240, 255, 0.02) 100%),
+    var(--ls-surface);
+  position: relative;
+  overflow: hidden;
+}
+
+.ls-status-hero::after {
+  content: '先生';
+  position: absolute;
+  right: 18px;
+  bottom: -10px;
+  font-size: 84px;
+  font-weight: 900;
+  color: var(--ls-text);
+  opacity: 0.035;
+  pointer-events: none;
+  line-height: 1;
+  user-select: none;
+  font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif;
+}
+
+/* Tactical Search & Filter Bar */
 .ls-filters {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   grid-template-columns: 2fr 1fr 1fr 1fr;
+  padding: 4px 0 8px;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .ls-filters {
     grid-template-columns: 1fr 1fr;
   }
 }
 
-.ls-table-wrap {
-  overflow-x: auto;
+@media (max-width: 480px) {
+  .ls-filters {
+    grid-template-columns: 1fr;
+  }
 }
 
+.ls-table-wrap {
+  overflow-x: auto;
+  border-radius: 6px;
+  border: 1px solid var(--ls-border);
+}
+
+.ls-table-wrap table.ls-table {
+  border: none;
+}
+
+/* Review Training Action Buttons */
 .ls-review-actions {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.ls-btn-easy {
+  border-color: rgba(0, 230, 153, 0.4) !important;
+  color: var(--ls-ok) !important;
+  background: var(--ls-ok-bg) !important;
+}
+
+.ls-btn-easy:hover {
+  background: rgba(0, 230, 153, 0.22) !important;
+  box-shadow: 0 0 10px rgba(0, 230, 153, 0.3) !important;
+}
+
+.ls-btn-hard {
+  border-color: rgba(255, 176, 32, 0.4) !important;
+  color: var(--ls-warn) !important;
+  background: var(--ls-warn-bg) !important;
+}
+
+.ls-btn-hard:hover {
+  background: rgba(255, 176, 32, 0.22) !important;
+  box-shadow: 0 0 10px rgba(255, 176, 32, 0.3) !important;
+}
+
+.ls-btn-again {
+  border-color: rgba(255, 56, 96, 0.4) !important;
+  color: var(--ls-err) !important;
+  background: var(--ls-err-bg) !important;
+}
+
+.ls-btn-again:hover {
+  background: rgba(255, 56, 96, 0.22) !important;
+  box-shadow: 0 0 10px rgba(255, 56, 96, 0.3) !important;
 }

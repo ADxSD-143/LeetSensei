@@ -12,14 +12,20 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = join(HERE, '..', 'icons');
 const SIZES = [16, 32, 48, 128];
 
-const BACKGROUND = [15, 23, 42]; // slate-900
-const MARK = [56, 189, 248]; // sky-400
+const BACKGROUND = [11, 15, 25]; // deep obsidian ink
+const SUN_COLOR = [235, 28, 70]; // Japanese scarlet / Hinomaru crimson
+const AURA_COLOR = [0, 225, 255]; // Katana neon cyan energy aura
+const BLADE_COLOR = [255, 255, 255]; // Katana blade steel white
+const GOLD_ACCENT = [255, 195, 45]; // Golden ki accent
 
-/** Check mark in unit space: short down-stroke, long up-stroke. */
-const CHECK_STROKES = [
-  [0.25, 0.52, 0.43, 0.71],
-  [0.43, 0.71, 0.78, 0.29],
+/** Katana check-slash strokes in unit space: cutting down-left to up-right. */
+const KATANA_STROKES = [
+  [0.22, 0.54, 0.42, 0.73],
+  [0.42, 0.73, 0.8, 0.26],
 ];
+
+/** Sensei headband / kanji horizon stroke: represents discipline and focus. */
+const HEADBAND_STROKE = [0.28, 0.26, 0.72, 0.26];
 
 const CRC_TABLE = (() => {
   const table = new Int32Array(256);
@@ -107,35 +113,88 @@ function over(bottom, top) {
 
 function renderIcon(size) {
   const rgba = Buffer.alloc(size * size * 4);
-  const strokes = CHECK_STROKES.map(([ax, ay, bx, by]) => [
+  const strokes = KATANA_STROKES.map(([ax, ay, bx, by]) => [
     ax * size,
     ay * size,
     bx * size,
     by * size,
   ]);
+  const headband = [
+    HEADBAND_STROKE[0] * size,
+    HEADBAND_STROKE[1] * size,
+    HEADBAND_STROKE[2] * size,
+    HEADBAND_STROKE[3] * size,
+  ];
+
   const cornerRadius = 0.22 * size;
-  const strokeRadius = 0.072 * size;
+  const sunRadius = 0.34 * size;
+  const sunCenterY = size * 0.5;
+  const sunCenterX = size * 0.5;
+
+  const auraRadius = Math.max(1.2, 0.088 * size);
+  const bladeRadius = Math.max(0.7, 0.048 * size);
+  const headbandAuraRadius = Math.max(0.8, 0.042 * size);
+  const headbandRadius = Math.max(0.5, 0.024 * size);
 
   for (let y = 0; y < size; y += 1) {
     for (let x = 0; x < size; x += 1) {
       const px = x + 0.5;
       const py = y + 0.5;
 
-      const backgroundAlpha = coverage(
-        roundedRectDistance(px - size / 2, py - size / 2, size / 2, size / 2, cornerRadius),
+      const bgDist = roundedRectDistance(
+        px - size / 2,
+        py - size / 2,
+        size / 2,
+        size / 2,
+        cornerRadius,
       );
-      let markAlpha = 0;
-      for (const [ax, ay, bx, by] of strokes) {
-        markAlpha = Math.max(
-          markAlpha,
-          coverage(segmentDistance(px, py, ax, ay, bx, by) - strokeRadius),
-        );
+      const bgAlpha = coverage(bgDist);
+      if (bgAlpha <= 0) continue;
+
+      let pixel = [BACKGROUND[0], BACKGROUND[1], BACKGROUND[2], bgAlpha];
+
+      const rimDist = Math.abs(bgDist + 1.2);
+      const rimAlpha = Math.max(0, 1 - rimDist / 1.5) * 0.45 * bgAlpha;
+      pixel = over(pixel, [AURA_COLOR[0], AURA_COLOR[1], AURA_COLOR[2], rimAlpha]);
+
+      const sunDist = Math.hypot(px - sunCenterX, py - sunCenterY) - sunRadius;
+      const sunAlpha = coverage(sunDist) * bgAlpha;
+      if (sunAlpha > 0) {
+        const sunGrad = Math.max(0, Math.min(1, (py - (sunCenterY - sunRadius)) / (sunRadius * 2)));
+        const sunR = Math.round(SUN_COLOR[0] * (1 - sunGrad * 0.15));
+        const sunG = Math.round(SUN_COLOR[1] + sunGrad * 20);
+        const sunB = Math.round(SUN_COLOR[2] + sunGrad * 15);
+        pixel = over(pixel, [sunR, sunG, sunB, sunAlpha]);
       }
 
-      const pixel = over(
-        [BACKGROUND[0], BACKGROUND[1], BACKGROUND[2], backgroundAlpha],
-        [MARK[0], MARK[1], MARK[2], markAlpha],
-      );
+      if (size >= 24) {
+        const hbDist = segmentDistance(px, py, headband[0], headband[1], headband[2], headband[3]);
+        const hbAuraAlpha = coverage(hbDist - headbandAuraRadius) * 0.7 * bgAlpha;
+        pixel = over(pixel, [GOLD_ACCENT[0], GOLD_ACCENT[1], GOLD_ACCENT[2], hbAuraAlpha]);
+        const hbAlpha = coverage(hbDist - headbandRadius) * bgAlpha;
+        pixel = over(pixel, [BLADE_COLOR[0], BLADE_COLOR[1], BLADE_COLOR[2], hbAlpha]);
+      }
+
+      let auraAlpha = 0;
+      let bladeAlpha = 0;
+      for (const [ax, ay, bx, by] of strokes) {
+        const dist = segmentDistance(px, py, ax, ay, bx, by);
+        auraAlpha = Math.max(auraAlpha, coverage(dist - auraRadius));
+        bladeAlpha = Math.max(bladeAlpha, coverage(dist - bladeRadius));
+      }
+
+      if (auraAlpha > 0) {
+        pixel = over(pixel, [
+          AURA_COLOR[0],
+          AURA_COLOR[1],
+          AURA_COLOR[2],
+          auraAlpha * 0.85 * bgAlpha,
+        ]);
+      }
+      if (bladeAlpha > 0) {
+        pixel = over(pixel, [BLADE_COLOR[0], BLADE_COLOR[1], BLADE_COLOR[2], bladeAlpha * bgAlpha]);
+      }
+
       const offset = (y * size + x) * 4;
       rgba[offset] = Math.round(pixel[0]);
       rgba[offset + 1] = Math.round(pixel[1]);

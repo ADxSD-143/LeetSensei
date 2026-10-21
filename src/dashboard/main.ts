@@ -91,10 +91,22 @@ function filteredProblems(overview: Overview): ProblemSummary[] {
   });
 }
 
+const TAB_KANJI: Record<TabId, string> = {
+  problems: '課題',
+  reviews: '鍛錬',
+  conflicts: '差分',
+  history: '記録',
+};
+
 function tabButton(id: TabId, label: string, count?: number): HTMLButtonElement {
+  const kanji = TAB_KANJI[id];
+  const countStr = count === undefined ? '' : ` (${count})`;
   const node = el('button', {
     className: 'ls-tab',
-    text: count === undefined ? label : `${label} (${count})`,
+    children: [
+      el('span', { className: 'ls-tab-kanji', text: kanji }),
+      el('span', { text: `${label}${countStr}` }),
+    ],
     attrs: { type: 'button', role: 'tab', 'aria-selected': String(activeTab === id) },
   });
   node.addEventListener('click', () => {
@@ -129,7 +141,11 @@ function problemTable(problems: ProblemSummary[]): HTMLElement {
           el('td', {
             children: [
               badge(
-                problem.difficulty,
+                problem.difficulty === 'Easy'
+                  ? '易 Easy'
+                  : problem.difficulty === 'Hard'
+                    ? '難 Hard'
+                    : '中 Medium',
                 problem.difficulty === 'Easy'
                   ? 'ok'
                   : problem.difficulty === 'Hard'
@@ -258,21 +274,21 @@ function filtersBar(overview: Overview): HTMLElement {
 
 function reviewRow(row: RevisionRow): HTMLElement {
   const actions = el('div', { className: 'ls-review-actions' });
-  for (const [rating, label] of [
-    ['again', 'Again'],
-    ['hard', 'Hard'],
-    ['easy', 'Easy'],
+  for (const [rating, label, btnClass] of [
+    ['again', '再 Again', 'ls-btn-again'],
+    ['hard', '難 Hard', 'ls-btn-hard'],
+    ['easy', '易 Easy', 'ls-btn-easy'],
   ] as const) {
-    actions.append(
-      button(
-        label,
-        () =>
-          void run(() =>
-            send({ type: 'revision/review', payload: { problemId: row.problemId, rating } }),
-          ),
-        { small: true, variant: rating === 'easy' ? 'primary' : undefined },
-      ),
+    const btn = button(
+      label,
+      () =>
+        void run(() =>
+          send({ type: 'revision/review', payload: { problemId: row.problemId, rating } }),
+        ),
+      { small: true },
     );
+    btn.classList.add(btnClass);
+    actions.append(btn);
   }
 
   const dateInput = el('input', {
@@ -531,8 +547,23 @@ function renderHeader(overview: Overview): void {
         el('div', {
           className: 'ls-brand',
           children: [
-            el('img', { attrs: { src: 'icons/icon-48.png', alt: '' } }),
-            el('span', { text: `LeetSensei ${overview.version}` }),
+            el('img', { attrs: { src: 'icons/icon-48.png', alt: 'LeetSensei' } }),
+            el('div', {
+              className: 'ls-brand-info',
+              children: [
+                el('div', {
+                  className: 'ls-brand-title',
+                  children: [
+                    el('span', { text: 'LeetSensei' }),
+                    el('span', { className: 'ls-tag-badge', text: '先生' }),
+                  ],
+                }),
+                el('div', {
+                  className: 'ls-brand-sub',
+                  text: `アルゴリズム道場 · Algorithm Dojo v${overview.version}`,
+                }),
+              ],
+            }),
           ],
         }),
         el('div', {
@@ -557,7 +588,7 @@ function render(overview: Overview, pending: PendingJob | null, revisions: Revis
 
   app.append(
     el('section', {
-      className: 'ls-card ls-stack',
+      className: 'ls-card ls-status-hero ls-stack',
       children: [
         el('div', {
           className: 'ls-row ls-row--wrap',
@@ -571,7 +602,7 @@ function render(overview: Overview, pending: PendingJob | null, revisions: Revis
                 el('strong', {
                   text: overview.connected
                     ? `${overview.login ?? 'GitHub'} · ${overview.repo ? `${overview.repo.owner}/${overview.repo.repo}@${overview.repo.branch}` : 'no repository selected'}`
-                    : 'Not connected to GitHub',
+                    : '未接続 · Not connected to GitHub',
                 }),
               ],
             }),
@@ -583,21 +614,21 @@ function render(overview: Overview, pending: PendingJob | null, revisions: Revis
           className: 'ls-row ls-row--wrap',
           children: [
             badge(
-              `${overview.schedule.overdue} overdue`,
+              `遅延 ${overview.schedule.overdue} overdue`,
               overview.schedule.overdue > 0 ? 'err' : 'neutral',
             ),
             badge(
-              `${overview.schedule.dueToday} due today`,
+              `本日 ${overview.schedule.dueToday} due today`,
               overview.schedule.dueToday > 0 ? 'warn' : 'neutral',
             ),
-            badge(`${overview.schedule.upcoming} upcoming`),
-            badge(`${overview.problems.length} problems`),
+            badge(`次回 ${overview.schedule.upcoming} upcoming`),
+            badge(`修練 ${overview.problems.length} problems`),
             overview.queuedSubmissions > 0
-              ? badge(`${overview.queuedSubmissions} waiting to sync`, 'info')
+              ? badge(`待機 ${overview.queuedSubmissions} waiting to sync`, 'info')
               : null,
             el('span', {
               className: 'ls-small ls-muted',
-              text: `Last sync ${formatDateTime(overview.lastSyncedAt)}`,
+              text: `最終同期: ${formatDateTime(overview.lastSyncedAt)}`,
             }),
           ],
         }),

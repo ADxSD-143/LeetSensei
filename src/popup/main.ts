@@ -51,8 +51,14 @@ function header(): HTMLElement {
   const brand = el('div', {
     className: 'ls-brand',
     children: [
-      el('img', { attrs: { src: 'icons/icon-32.png', alt: '' } }),
-      el('span', { text: 'LeetSensei' }),
+      el('img', { attrs: { src: 'icons/icon-32.png', alt: 'LeetSensei' } }),
+      el('div', {
+        className: 'ls-brand-title',
+        children: [
+          el('span', { text: 'LeetSensei' }),
+          el('span', { className: 'ls-tag-badge', text: '先生' }),
+        ],
+      }),
     ],
   });
   return el('header', {
