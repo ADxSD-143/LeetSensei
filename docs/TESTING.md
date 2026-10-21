@@ -68,20 +68,24 @@ Be precise about what has been proven. This project distinguishes four levels:
 | **Live-verified**      | Confirmed against the real external service                           |
 | **Manually verified**  | A human loaded the extension in a real browser and used it            |
 
-| Behaviour                                                     | Level                                                                                                                               |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Accepted-only enforcement                                     | Unit tested + mocked integration                                                                                                    |
-| Language/tag/path/README/manifest logic                       | Unit tested                                                                                                                         |
-| GitHub retry, rate limit, conflict and commit behaviour       | Mocked integration                                                                                                                  |
-| LeetCode `questionData` query and response shape              | **Live-verified** (see below)                                                                                                       |
-| LeetCode `submissionDetails` and `submissionList` query shape | **Live-verified** (schema accepted; anonymous sessions receive `null`, which the parser handles)                                    |
-| LeetCode verdict **DOM detection**                            | **Not live-verified** — the problem page returns HTTP 403 to non-browser clients, so the rendered DOM cannot be inspected from here |
-| Extraction of a real Accepted submission's source code        | **Not live-verified** — requires an authenticated browser session                                                                   |
-| Extension loading and use in Chrome / Firefox                 | **Not yet performed** — see the manual procedure below                                                                              |
+| Behaviour                                                     | Level                                                                                                                                |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Accepted-only enforcement                                     | Unit tested + mocked integration                                                                                                     |
+| Language/tag/path/README/manifest logic                       | Unit tested                                                                                                                          |
+| GitHub retry, rate limit, conflict and commit behaviour       | Mocked integration                                                                                                                   |
+| LeetCode `questionData` query and response shape              | **Live-verified** (see below)                                                                                                        |
+| LeetCode `submissionDetails` and `submissionList` query shape | **Live-verified** (schema accepted; anonymous sessions receive `null`, which the parser handles)                                     |
+| Same-origin GraphQL POST from a real browser page             | **Live-verified** (HTTP 200 from the page context)                                                                                   |
+| Submit-button identification for the click trigger            | **Live-verified** (the real control is `<button data-e2e-locator="console-submit-button" aria-label="Submit">Submit</button>`)       |
+| Absence of a verdict node on a fresh page load                | **Live-verified** (nothing to misread, so opening a solved problem cannot trigger a spurious sync)                                   |
+| LeetCode's DOM test-hook convention                           | **Live-verified** (`data-e2e-locator`, values prefixed `console-*`)                                                                  |
+| The verdict container's exact locator after a submission      | **Not live-verified** — it only exists after submitting, which needs an account. Mitigated by scanning every `data-e2e-locator` node |
+| Extraction of a real Accepted submission's source code        | **Not live-verified** — requires an authenticated browser session                                                                    |
+| Extension loading and use in Chrome / Firefox                 | **Not yet performed** — see the manual procedure below                                                                               |
 
 ### Live verification performed
 
-Run against `https://leetcode.com/graphql` on 2026-10-21 with a plain HTTPS client:
+**API, from a plain HTTPS client** (`https://leetcode.com/graphql`):
 
 ```text
 questionData       HTTP 200 →
@@ -95,19 +99,50 @@ submissionDetails  HTTP 200 → {"data":{"submissionDetails":null}}   (no GraphQ
 problem page       HTTP 403  (bot protection for non-browser clients)
 ```
 
+**Page structure, from a real browser session** (Chromium via CDP, headed, on
+`/problems/contains-duplicate/description/`):
+
+```text
+title                     "Contains Duplicate - LeetCode"
+meta[name=csrf-token]     absent
+data-e2e-locator values   console-submit-button, console-run-button,
+                          console-testcase-tag, console-testcase-input
+[class*="result"] nodes   none
+Submit control            <button data-e2e-locator="console-submit-button"
+                            aria-label="Submit">Submit</button>
+GraphQL from the page     POST /graphql/ → HTTP 200, question payload as above
+submissionList from page  POST /graphql/ → HTTP 200, {"submissions":null}
+verdict node on load      none
+```
+
 Conclusions drawn, and only these:
 
 1. `questionData` returns exactly the shape `parseQuestionResponse` expects, including
-   `topicTags`, so problem metadata extraction is verified against the real service.
+   `topicTags`, so problem metadata extraction is verified against the real service — from both
+   a plain client and a browser page.
 2. `submissionList` and `submissionDetails` are accepted by the live schema (no GraphQL
    `errors`), so every field name in those queries exists. Anonymous sessions receive `null`,
-   which `parseSubmissionListResponse` and `parseSubmissionDetailsResponse` handle by
-   returning `[]` / `null` rather than throwing — unit tested.
-3. The page HTML is **not** reachable to a non-browser client, which is why the design reads
-   the verdict from the live DOM in a content script and takes everything else from the API.
+   which the parsers handle by returning `[]` / `null` rather than throwing.
+3. **The same-origin GraphQL POST works from a browser page context**, which is how the content
+   script actually issues it. There is no CORS or bot-protection problem for a real request.
+4. There is **no `<meta name="csrf-token">`**, so `readCsrfToken` returns null and the header is
+   simply omitted — and the request still succeeds. The CSRF plumbing is a safe no-op in
+   practice.
+5. The submit control is a real `<button>` whose text is exactly `Submit`, so the click
+   listener's `closest('button')` + `isSubmitControl` path is confirmed against the live page.
+6. LeetCode marks its console UI with `data-e2e-locator`, so scanning that attribute is better
+   founded than guessing class names. **It is now the first entry in `RESULT_NODE_SELECTORS`.**
+7. On a fresh page load there is **no verdict node**, so merely opening a problem you have
+   already solved cannot trigger a sync.
+8. Body text on a real problem page _does_ contain verdict-like phrases in prose (the console
+   panel is labelled "Test Result", and statements mention time limits). A loose text search
+   over the page would therefore produce false verdicts. This is why classification is scoped to
+   candidate nodes **and** why a node longer than `MAX_VERDICT_TEXT_LENGTH` (200 characters) is
+   ignored — a real verdict is short. Both behaviours are unit tested.
 
-Do not read more into this than it says: the _queries_ are validated, the _DOM selectors_ are
-not.
+Do not read more into this than it says: the _queries_, the _submit control_ and the _page
+structure_ are verified; the verdict container's own locator is not, because it requires a
+submission.
 
 ## Manual browser test procedure (not yet performed)
 

@@ -70,6 +70,16 @@ Consequences:
 - The DOM layer is one small, defensive predicate (`pickResultVerdict`) with unit tests;
   the API layer is fixture-tested and live-verified.
 
+The trigger scans LeetCode's own `data-e2e-locator` test hooks first — verified in a real
+browser session, where the console UI is marked `console-submit-button`, `console-run-button`
+and so on — rather than relying on guessed class names. Two further guards keep it honest:
+
+- a candidate node longer than `MAX_VERDICT_TEXT_LENGTH` (200 characters) is ignored, because
+  real problem statements mention "Time Limit Exceeded" and "Runtime Error" in prose;
+- a verdict is only a _trigger_. The submission id must come from `submissionList`, the newest
+  entry must be unprocessed, and both `submissionList` and `submissionDetails` must report
+  `Accepted` before anything is uploaded.
+
 ### Why two planning phases
 
 The manifest is a description of the files LeetSensei manages, and it is written into the

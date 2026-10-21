@@ -27,8 +27,10 @@ Legend: `[x]` done and verified · `[~]` implemented, not yet verified in a real
 - [x] Source code, language, problem id, title, difficulty and official tags via LeetCode's GraphQL API
 - [x] Sanitised fixtures and adapter tests for every parsing path
 - [x] Clear reported errors for unsupported languages and extraction failures
-- [x] GraphQL queries validated against the live endpoint
-- [~] Verdict DOM detection — implemented and unit tested, but not live-verified; see the manual procedure in [docs/TESTING.md](docs/TESTING.md#manual-browser-test-procedure-not-yet-performed)
+- [x] GraphQL queries validated against the live endpoint, from a plain client and from a real browser page
+- [x] Submit-button identification and the absence of a pre-submission verdict node verified against the live page
+- [x] LeetCode's own `data-e2e-locator` hook scanned first, instead of relying on guessed class names
+- [~] The verdict container that appears _after_ a submission — still unverified, because it needs an account; see the manual procedure in [docs/TESTING.md](docs/TESTING.md#manual-browser-test-procedure-not-yet-performed)
 
 ## Phase 3 — Solution organization
 

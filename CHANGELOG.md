@@ -31,7 +31,12 @@ First working implementation. Everything below is covered by the automated suite
   LeetCode's own GraphQL API as a same-origin request. No cookie access, no password.
 - Unsupported languages and extraction failures are reported explicitly; nothing is guessed
   and nothing is uploaded.
-- The three queries used were validated against the live `leetcode.com/graphql` endpoint.
+- The three queries used were validated against the live `leetcode.com/graphql` endpoint, and the
+  page itself was inspected in a real browser session: the submit control, the absence of a
+  verdict node before submitting, and LeetCode's `data-e2e-locator` convention are all
+  live-verified. The verdict scan now uses that attribute instead of guessed class names, and a
+  candidate node longer than 200 characters is ignored so prose mentioning "Time Limit Exceeded"
+  cannot be misread as a verdict.
 
 **Organization**
 

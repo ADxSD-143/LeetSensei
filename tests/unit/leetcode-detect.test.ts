@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MAX_VERDICT_TEXT_LENGTH,
+  RESULT_NODE_SELECTORS,
   classifyResultText,
   evaluateResultNode,
   extractSubmissionId,
@@ -54,6 +56,37 @@ describe('evaluateResultNode', () => {
     expect(evaluateResultNode({ textContent: 'Accepted' })).toBe('accepted');
     expect(evaluateResultNode(null)).toBe('none');
     expect(evaluateResultNode({ textContent: null })).toBe('none');
+  });
+
+  it('ignores prose that merely mentions a verdict phrase', () => {
+    // Real problem statements mention these phrases in their constraints, so a
+    // long node must never be read as a verdict.
+    const prose = `${'Your solution will be judged against the following. '.repeat(6)}Time Limit Exceeded and Runtime Error are possible outcomes.`;
+    expect(prose.length).toBeGreaterThan(MAX_VERDICT_TEXT_LENGTH);
+    expect(classifyResultText(prose)).toBe('rejected');
+    expect(evaluateResultNode({ textContent: prose })).toBe('none');
+  });
+
+  it('still reads a verdict with a runtime figure attached', () => {
+    expect(evaluateResultNode({ textContent: 'Accepted\nRuntime: 62 ms\nMemory: 16.4 MB' })).toBe(
+      'accepted',
+    );
+  });
+});
+
+describe('RESULT_NODE_SELECTORS', () => {
+  it('scans the attribute verified on the live page first', () => {
+    // Live-verified on leetcode.com: the console UI marks
+    // console-submit-button, console-run-button, console-testcase-tag and
+    // console-testcase-input with `data-e2e-locator`.
+    expect(RESULT_NODE_SELECTORS[0]).toBe('[data-e2e-locator]');
+  });
+
+  it('lists only attribute selectors', () => {
+    for (const selector of RESULT_NODE_SELECTORS) {
+      expect(selector.startsWith('[')).toBe(true);
+      expect(selector.endsWith(']')).toBe(true);
+    }
   });
 });
 

@@ -39,25 +39,26 @@ happens twice: once against the page verdict and again against the submission re
 
 ## Feature status
 
-| Area                           | Status                             | Notes                                                                             |
-| ------------------------------ | ---------------------------------- | --------------------------------------------------------------------------------- |
-| Accepted-only gate             | **Implemented, tested**            | Single validator; every non-Accepted status has a test                            |
-| Language coverage              | **Implemented, tested**            | ~40 LeetCode languages; unknown languages are reported, never guessed             |
-| Topic-tag → folder mapping     | **Implemented, tested**            | `Hash Table` → `Hash-Table`, Unicode-safe, collision-safe, reserved-name-safe     |
-| Problem README                 | **Implemented, tested**            | Pre-filled template; your approach, complexity and notes survive every sync       |
-| Multi-language solutions       | **Implemented, tested**            | One file per language, accumulated across submissions                             |
-| Manifest + hashing             | **Implemented, tested**            | Versioned schema with migration, per-file sha256 and Git blob ids                 |
-| Conflict protection            | **Implemented, tested**            | Replace / Save version / Cancel; compare-by-blob-id before writing                |
-| Grouped commits                | **Implemented, tested**            | One submission → one commit via the Git data API; never `force`                   |
-| Idempotent retries             | **Implemented, tested**            | Content-addressed blobs; a repeated event creates no duplicate files              |
-| Rate limits / offline / expiry | **Implemented, tested**            | Bounded backoff, `retry-after`, retryable vs terminal error taxonomy              |
-| Revision scheduler             | **Implemented, tested**            | Ladder 1/3/7/14/30 days; Easy advances, Hard holds, Again resets                  |
-| Revision backup + restore      | **Implemented, tested**            | Backed up to `.leetcode-tracker/revisions.json`, restorable on a new device       |
-| Popup / dashboard / options    | **Implemented**                    | Loading, empty, error, conflict and partial states; keyboard accessible           |
-| LeetCode GraphQL queries       | **Live-verified**                  | Confirmed against `leetcode.com/graphql` (see [docs/TESTING.md](docs/TESTING.md)) |
-| LeetCode DOM verdict detection | **Implemented, not live-verified** | Cannot be checked without a real signed-in browser session                        |
-| Manual browser smoke test      | **Not yet performed**              | Requires loading the unpacked extension and solving a problem                     |
-| Browser-store publication      | **Not started**                    | Needs maintainer accounts, signing and review                                     |
+| Area                                     | Status                  | Notes                                                                                                          |
+| ---------------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Accepted-only gate                       | **Implemented, tested** | Single validator; every non-Accepted status has a test                                                         |
+| Language coverage                        | **Implemented, tested** | ~40 LeetCode languages; unknown languages are reported, never guessed                                          |
+| Topic-tag → folder mapping               | **Implemented, tested** | `Hash Table` → `Hash-Table`, Unicode-safe, collision-safe, reserved-name-safe                                  |
+| Problem README                           | **Implemented, tested** | Pre-filled template; your approach, complexity and notes survive every sync                                    |
+| Multi-language solutions                 | **Implemented, tested** | One file per language, accumulated across submissions                                                          |
+| Manifest + hashing                       | **Implemented, tested** | Versioned schema with migration, per-file sha256 and Git blob ids                                              |
+| Conflict protection                      | **Implemented, tested** | Replace / Save version / Cancel; compare-by-blob-id before writing                                             |
+| Grouped commits                          | **Implemented, tested** | One submission → one commit via the Git data API; never `force`                                                |
+| Idempotent retries                       | **Implemented, tested** | Content-addressed blobs; a repeated event creates no duplicate files                                           |
+| Rate limits / offline / expiry           | **Implemented, tested** | Bounded backoff, `retry-after`, retryable vs terminal error taxonomy                                           |
+| Revision scheduler                       | **Implemented, tested** | Ladder 1/3/7/14/30 days; Easy advances, Hard holds, Again resets                                               |
+| Revision backup + restore                | **Implemented, tested** | Backed up to `.leetcode-tracker/revisions.json`, restorable on a new device                                    |
+| Popup / dashboard / options              | **Implemented**         | Loading, empty, error, conflict and partial states; keyboard accessible                                        |
+| LeetCode GraphQL queries                 | **Live-verified**       | Confirmed against `leetcode.com/graphql`, from a plain client and from a real browser page                     |
+| LeetCode submit button + page structure  | **Live-verified**       | The real control is `data-e2e-locator="console-submit-button"`, and no verdict node exists before a submission |
+| LeetCode verdict node after a submission | **Not live-verified**   | It only exists after submitting, which needs an account. Mitigated by scanning every `data-e2e-locator` node   |
+| Manual browser smoke test                | **Not yet performed**   | Requires loading the unpacked extension and solving a problem                                                  |
+| Browser-store publication                | **Not started**         | Needs maintainer accounts, signing and review                                                                  |
 
 ## Screenshots
 

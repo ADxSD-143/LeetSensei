@@ -13,13 +13,33 @@ export interface TextCarrier {
 
 export type ResultVerdict = 'accepted' | 'rejected' | 'pending' | 'none';
 
-/** Candidate containers that display a submission verdict. */
+/**
+ * Candidate containers that display a submission verdict.
+ *
+ * Verified against the live problem page: LeetCode marks its console UI with
+ * `data-e2e-locator` attributes (`console-submit-button`, `console-run-button`,
+ * `console-testcase-tag`, `console-testcase-input`), so its own stable test hooks
+ * are the most reliable signal available and are scanned first. The result panel
+ * itself only exists after a submission, so its exact locator is still unknown;
+ * scanning *every* `data-e2e-locator` node covers it without guessing a name.
+ *
+ * On a fresh page load none of these nodes carry a verdict, which is exactly the
+ * behaviour required to avoid a spurious sync when merely opening a problem.
+ */
 export const RESULT_NODE_SELECTORS: readonly string[] = [
+  '[data-e2e-locator]',
   '[data-e2e-locator="submission-result"]',
   '[data-e2e-locator="console-result"]',
-  '[data-e2e-locator^="submission"]',
   '[class*="result"]',
 ];
+
+/**
+ * A real verdict node contains only the verdict and maybe a runtime figure.
+ * Problem statements, however, often contain phrases such as "Time Limit
+ * Exceeded" or "Runtime Error" in prose, so anything longer than this is
+ * ignored rather than misread as a verdict.
+ */
+export const MAX_VERDICT_TEXT_LENGTH = 200;
 
 export const PENDING_RESULT_TOKENS: readonly string[] = [
   'pending',
@@ -65,7 +85,11 @@ export function classifyResultText(text: string | null): ResultVerdict {
 }
 
 export function evaluateResultNode(node: TextCarrier | null): ResultVerdict {
-  return classifyResultText(node?.textContent ?? null);
+  const text = node?.textContent ?? null;
+  if (text === null) return 'none';
+  // Guard against prose that merely mentions a verdict phrase.
+  if (text.length > MAX_VERDICT_TEXT_LENGTH) return 'none';
+  return classifyResultText(text);
 }
 
 /**
