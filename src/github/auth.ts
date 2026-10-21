@@ -33,6 +33,16 @@ export interface DeviceFlowOptions {
   fetchImpl?: FetchLike;
 }
 
+/**
+ * Polling never sends a scope: GitHub fixes it when the device code is issued,
+ * so the token exchange only needs the code.
+ */
+export interface DevicePollOptions {
+  clientId: string;
+  deviceCode: string;
+  fetchImpl?: FetchLike;
+}
+
 function fetchOf(options: { fetchImpl?: FetchLike }): FetchLike {
   const f = options.fetchImpl ?? fetch;
   return (input, init) => f.call(globalThis, input, init);
@@ -135,9 +145,7 @@ export type DevicePollOutcome =
  * A single token request. The options page drives the loop itself so a service
  * worker restart cannot drop a long-lived message channel mid sign-in.
  */
-export async function pollDeviceOnce(
-  options: DeviceFlowOptions & { deviceCode: string },
-): Promise<DevicePollOutcome> {
+export async function pollDeviceOnce(options: DevicePollOptions): Promise<DevicePollOutcome> {
   const clientId = requireClientId(options.clientId);
   const body = new URLSearchParams({
     client_id: clientId,
@@ -207,7 +215,6 @@ export async function pollForDeviceToken(options: PollOptions): Promise<AuthToke
     const outcome = await pollDeviceOnce({
       clientId: options.clientId,
       deviceCode: options.deviceCode,
-      scope: options.scope,
       ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
     });
 

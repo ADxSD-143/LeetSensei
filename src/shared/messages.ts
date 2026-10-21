@@ -34,6 +34,10 @@ export type UiMessage =
   | { type: 'github/verify' }
   | { type: 'github/list-repos' }
   | { type: 'github/list-branches'; payload: { owner: string; repo: string } }
+  | {
+      type: 'github/check-access';
+      payload: { owner: string; repo: string; branch: string };
+    }
   | { type: 'settings/save'; payload: unknown }
   | { type: 'settings/load' }
   | { type: 'data/restore' }
@@ -66,6 +70,7 @@ export const MESSAGE_TYPES: readonly UiMessage['type'][] = [
   'github/verify',
   'github/list-repos',
   'github/list-branches',
+  'github/check-access',
   'settings/save',
   'settings/load',
   'data/restore',

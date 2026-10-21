@@ -30,3 +30,53 @@
   padding: 10px 14px;
   display: inline-block;
 }
+
+.ls-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.ls-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ls-muted);
+  padding: 3px 10px 3px 3px;
+  border-radius: 999px;
+}
+
+.ls-step__number {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--ls-surface-alt);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ls-step--active {
+  color: var(--ls-text);
+  font-weight: 650;
+  background: var(--ls-surface-alt);
+}
+
+.ls-step--active .ls-step__number {
+  background: var(--ls-accent);
+  color: var(--ls-accent-text);
+}
+
+.ls-step--done .ls-step__number {
+  background: var(--ls-ok-bg);
+  color: var(--ls-ok);
+}
+
+.ls-step--done {
+  color: var(--ls-ok);
+}

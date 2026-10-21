@@ -64,7 +64,10 @@ export function button(
   return node;
 }
 
-export function note(message: string, tone: 'info' | 'warn' | 'err' = 'info'): HTMLDivElement {
+export function note(
+  message: string,
+  tone: 'info' | 'ok' | 'warn' | 'err' = 'info',
+): HTMLDivElement {
   const className = tone === 'info' ? 'ls-note' : `ls-note ls-note--${tone}`;
   return el('div', { className, text: message, attrs: { role: 'status' } });
 }

@@ -51,6 +51,8 @@ export class FakeGithubClient implements GithubClient {
   hideCommitFromBranch = false;
   /** Fail this many upcoming calls of any kind with a network error. */
   networkFailures = 0;
+  /** Makes the repository invisible, as it is to a public_repo token on a private repo. */
+  repoNotFound = false;
 
   private treeCounter = 0;
   private commitCounter = 0;
@@ -123,6 +125,12 @@ export class FakeGithubClient implements GithubClient {
 
   async getRepo(): Promise<RepoInfo> {
     this.guard('getRepo');
+    if (this.repoNotFound) {
+      throw new LeetSenseiError(
+        'not_found',
+        'GitHub could not find the repository, branch or file.',
+      );
+    }
     return {
       fullName: `${this.ref.owner}/${this.ref.repo}`,
       defaultBranch: 'main',
@@ -149,9 +157,10 @@ export class FakeGithubClient implements GithubClient {
     return [...this.branches].sort();
   }
 
-  async getBranchSha(): Promise<string | null> {
+  async getBranchSha(ref: RepoRef): Promise<string | null> {
     this.guard('getBranchSha');
-    if (!this.branches.includes(this.ref.branch)) return null;
+    // Honour the requested branch so destination checks can be exercised.
+    if (!this.branches.includes(ref.branch)) return null;
     return this.head;
   }
 

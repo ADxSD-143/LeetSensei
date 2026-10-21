@@ -296,6 +296,10 @@ label.ls-check input {
   font-size: 13px;
 }
 
+.ls-note--ok {
+  border-left-color: var(--ls-ok);
+  background: var(--ls-ok-bg);
+}
 .ls-note--warn {
   border-left-color: var(--ls-warn);
   background: var(--ls-warn-bg);

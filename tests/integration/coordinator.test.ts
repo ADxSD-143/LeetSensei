@@ -441,3 +441,61 @@ describe('coordinator: restore and data controls', () => {
     void STORAGE_KEYS;
   });
 });
+
+describe('coordinator: destination verification', () => {
+  it('reports write access and an existing branch', async () => {
+    const { coordinator } = await makeHarness();
+    const check = await coordinator.checkAccess('student', 'solutions', 'main');
+
+    expect(check).toEqual({
+      owner: 'student',
+      repo: 'solutions',
+      branch: 'main',
+      canPush: true,
+      branchExists: true,
+      defaultBranch: 'main',
+      isPrivate: false,
+    });
+  });
+
+  it('reports a repository the account cannot write to', async () => {
+    const { client, coordinator } = await makeHarness();
+    client.canPush = false;
+
+    const check = await coordinator.checkAccess('student', 'solutions', 'main');
+    expect(check.canPush).toBe(false);
+    expect(check.branchExists).toBe(true);
+  });
+
+  it('reports a missing branch instead of pretending setup succeeded', async () => {
+    const { coordinator } = await makeHarness();
+    const check = await coordinator.checkAccess('student', 'solutions', 'does-not-exist');
+
+    expect(check.branchExists).toBe(false);
+    expect(check.canPush).toBe(true);
+  });
+
+  it('surfaces a private repository as not found for a public-only token', async () => {
+    const { client, coordinator } = await makeHarness();
+    client.repoNotFound = true;
+
+    await expect(
+      coordinator.checkAccess('student', 'private-solutions', 'main'),
+    ).rejects.toMatchObject({ code: 'not_found' });
+  });
+
+  it('requires a connected account', async () => {
+    const { coordinator } = await makeHarness({ connected: false });
+    await expect(coordinator.checkAccess('student', 'solutions', 'main')).rejects.toMatchObject({
+      code: 'auth_required',
+    });
+  });
+
+  it('reports a private destination distinctly once access is granted', async () => {
+    const { client, coordinator } = await makeHarness();
+    client.repoPrivate = true;
+
+    const check = await coordinator.checkAccess('student', 'solutions', 'main');
+    expect(check.isPrivate).toBe(true);
+  });
+});

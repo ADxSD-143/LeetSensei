@@ -97,6 +97,7 @@ describe('startDeviceFlow', () => {
 });
 
 describe('pollDeviceOnce', () => {
+  // Polling deliberately takes no scope: GitHub fixes it when the code is issued.
   it('returns ok with the token and scopes', async () => {
     const fetchImpl: typeof fetch = async () =>
       jsonResponse({
@@ -106,7 +107,6 @@ describe('pollDeviceOnce', () => {
       });
     const outcome = await pollDeviceOnce({
       clientId: CLIENT_ID,
-      scope: 'public_repo',
       deviceCode: 'd',
       fetchImpl,
     });
@@ -122,7 +122,6 @@ describe('pollDeviceOnce', () => {
     await expect(
       pollDeviceOnce({
         clientId: CLIENT_ID,
-        scope: 'public_repo',
         deviceCode: 'd',
         fetchImpl: pending,
       }),
@@ -132,7 +131,6 @@ describe('pollDeviceOnce', () => {
     await expect(
       pollDeviceOnce({
         clientId: CLIENT_ID,
-        scope: 'public_repo',
         deviceCode: 'd',
         fetchImpl: slow,
       }),
@@ -143,7 +141,6 @@ describe('pollDeviceOnce', () => {
     const fetchImpl: typeof fetch = async () => jsonResponse({ error: 'access_denied' });
     const outcome = await pollDeviceOnce({
       clientId: CLIENT_ID,
-      scope: 'public_repo',
       deviceCode: 'd',
       fetchImpl,
     });
@@ -155,7 +152,6 @@ describe('pollDeviceOnce', () => {
     const fetchImpl: typeof fetch = async () => jsonResponse({ error: 'expired_token' });
     const outcome = await pollDeviceOnce({
       clientId: CLIENT_ID,
-      scope: 'public_repo',
       deviceCode: 'd',
       fetchImpl,
     });
@@ -168,7 +164,6 @@ describe('pollDeviceOnce', () => {
       jsonResponse({ error: 'weird', error_description: 'nope' });
     const outcome = await pollDeviceOnce({
       clientId: CLIENT_ID,
-      scope: 'public_repo',
       deviceCode: 'd',
       fetchImpl,
     });

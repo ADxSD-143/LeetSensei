@@ -72,30 +72,40 @@ function header(): HTMLElement {
 
 function connectionCard(overview: Overview): HTMLElement {
   const children: (Node | null)[] = [];
-  if (overview.connected) {
-    children.push(
+
+  const accountRow = el('div', {
+    className: 'ls-row',
+    children: [
       el('div', {
         className: 'ls-row',
         children: [
-          el('div', {
-            className: 'ls-row',
-            children: [
-              el('span', { className: 'ls-dot ls-dot--ok' }),
-              el('strong', { text: overview.login ?? 'GitHub account' }),
-            ],
-          }),
-          badge(overview.authMethod === 'pat' ? 'token' : 'device flow'),
+          el('span', { className: 'ls-dot ls-dot--ok' }),
+          el('strong', { text: overview.login ?? 'GitHub account' }),
         ],
       }),
-    );
-  } else {
+      badge(overview.authMethod === 'pat' ? 'token' : 'device flow'),
+    ],
+  });
+
+  if (overview.setup === 'needs-github') {
     children.push(
-      note('No GitHub account is connected yet, so nothing can be uploaded.'),
+      note('Connect GitHub to start saving accepted solutions.'),
       el('div', {
         className: 'ls-actions',
         children: [button('Connect GitHub', () => openPage('options'), { variant: 'primary' })],
       }),
     );
+  } else if (overview.setup === 'needs-repository') {
+    children.push(
+      accountRow,
+      note('One more step: choose the repository and branch where solutions should go.'),
+      el('div', {
+        className: 'ls-actions',
+        children: [button('Choose repository', () => openPage('options'), { variant: 'primary' })],
+      }),
+    );
+  } else {
+    children.push(accountRow);
   }
 
   children.push(

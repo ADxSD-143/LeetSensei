@@ -48,6 +48,17 @@ export interface OperationResult {
   code?: ErrorCode;
 }
 
+/** Result of verifying a destination repository and branch before setup completes. */
+export interface AccessCheck {
+  owner: string;
+  repo: string;
+  branch: string;
+  canPush: boolean;
+  branchExists: boolean;
+  defaultBranch: string;
+  isPrivate: boolean;
+}
+
 export interface RestoreResult extends OperationResult {
   problemsAdded: number;
   revisionsAdded: number;
@@ -876,6 +887,33 @@ export class SyncCoordinator {
         repo,
         branch: settings.branch,
       });
+    });
+  }
+
+  /**
+   * Verifies the chosen destination before the user is told setup is complete:
+   * the repository must be reachable and writable, and the branch must exist.
+   * A `not_found` here almost always means a private repository that the
+   * current token cannot see, which the options page turns into an upgrade hint.
+   */
+  async checkAccess(owner: string, repo: string, branch: string): Promise<AccessCheck> {
+    return this.run(async () => {
+      const auth = await this.repository.loadAuth();
+      if (auth.token === null) {
+        throw new LeetSenseiError('auth_required', 'Connect GitHub first.');
+      }
+      const client = this.createClient(auth.token);
+      const info = await client.getRepo({ owner, repo, branch });
+      const head = await client.getBranchSha({ owner, repo, branch });
+      return {
+        owner,
+        repo,
+        branch,
+        canPush: info.canPush,
+        branchExists: head !== null,
+        defaultBranch: info.defaultBranch,
+        isPrivate: info.isPrivate,
+      };
     });
   }
 

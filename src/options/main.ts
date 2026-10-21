@@ -1,6 +1,8 @@
 import type { Overview } from '../background/overview';
+import type { AccessCheck } from '../background/coordinator';
 import type { DeviceFlowStart, DevicePollOutcome } from '../github/auth';
 import type { RepoListItem } from '../github/types';
+import { ALLOW_PAT } from '../config';
 import type { SyncStatusReport } from '../shared/messages';
 import type { PendingJob } from '../storage/repository';
 import { intervalsToInput, readIntervalsFromInput } from '../storage/settings';
@@ -40,8 +42,37 @@ const app = qs<HTMLElement>('#app');
 
 let device: DeviceFlowStart | null = null;
 let pollTimer: number | null = null;
+let pollError: string | null = null;
 let repoList: RepoListItem[] = [];
 let branchList: string[] = [];
+
+// Guided setup state. Kept outside the render cycle so a re-render (which the
+// background pushes on every status change) never loses the user's choices.
+let reposLoading = false;
+let reposError: string | null = null;
+let reposRequestedFor: string | null = null;
+let branchesRequestedFor: string | null = null;
+let selectedRepo: string | null = null;
+let selectedBranch = '';
+let accessCheck: AccessCheck | null = null;
+let accessError: string | null = null;
+
+function resetPicker(): void {
+  repoList = [];
+  branchList = [];
+  reposRequestedFor = null;
+  branchesRequestedFor = null;
+  reposLoading = false;
+  reposError = null;
+  selectedRepo = null;
+  selectedBranch = '';
+  accessCheck = null;
+  accessError = null;
+}
+
+const ACCOUNT_DESCRIPTION = ALLOW_PAT
+  ? 'LeetSensei uses GitHub OAuth device flow, which needs no client secret. This development build also accepts a personal access token.'
+  : 'LeetSensei uses GitHub OAuth device flow. No password, token, or client secret is stored in the extension.';
 
 function field(labelText: string, control: HTMLElement, hint?: string): HTMLLabelElement {
   const label = el('label', {
@@ -125,11 +156,7 @@ function accountSection(overview: Overview): HTMLElement {
         ],
       }),
     );
-    return section(
-      'GitHub account',
-      'LeetSensei uses GitHub OAuth device flow, which needs no client secret in the extension. A personal access token is accepted as a fallback.',
-      children,
-    );
+    return section('GitHub account', ACCOUNT_DESCRIPTION, children);
   }
 
   const scopeSelect = el('select', {
@@ -195,51 +222,60 @@ function accountSection(overview: Overview): HTMLElement {
     );
   }
 
-  const tokenInput = el('input', {
-    attrs: { type: 'password', placeholder: 'ghp_... or github_pat_...', autocomplete: 'off' },
-  });
-  children.push(
-    el('details', {
-      children: [
-        el('summary', { text: 'Advanced: use a personal access token instead' }),
-        el('div', {
-          className: 'ls-stack',
-          children: [
-            el('p', {
-              className: 'ls-small ls-muted',
-              text: 'Create a fine-grained token with Contents: read and write on the destination repository only. It is stored in this browser profile and sent to api.github.com only.',
-            }),
-            field('Token', tokenInput),
-            el('div', {
-              className: 'ls-actions',
-              children: [
-                button(
-                  'Save token',
-                  () =>
-                    void run(async () => {
-                      await send({ type: 'github/pat-save', payload: { token: tokenInput.value } });
-                      tokenInput.value = '';
-                    }),
-                ),
-              ],
-            }),
-          ],
-        }),
-      ],
-    }),
-  );
+  if (ALLOW_PAT) {
+    const tokenInput = el('input', {
+      attrs: { type: 'password', placeholder: 'ghp_... or github_pat_...', autocomplete: 'off' },
+    });
+    children.push(
+      el('details', {
+        children: [
+          el('summary', { text: 'Development: use a personal access token instead' }),
+          el('div', {
+            className: 'ls-stack',
+            children: [
+              el('p', {
+                className: 'ls-small ls-muted',
+                text: 'Development builds only. Create a fine-grained token with Contents: read and write on the destination repository. It is stored in this browser profile and sent to api.github.com only.',
+              }),
+              field('Token', tokenInput),
+              el('div', {
+                className: 'ls-actions',
+                children: [
+                  button(
+                    'Save token',
+                    () =>
+                      void run(async () => {
+                        await send({
+                          type: 'github/pat-save',
+                          payload: { token: tokenInput.value },
+                        });
+                        tokenInput.value = '';
+                      }),
+                  ),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+  }
 
-  return section(
-    'GitHub account',
-    'LeetSensei uses GitHub OAuth device flow, which needs no client secret in the extension. A personal access token is accepted as a fallback.',
-    children,
-  );
+  return section('GitHub account', ACCOUNT_DESCRIPTION, children);
 }
 
-async function startDevice(scope: string): Promise<void> {
+async function startDevice(scope: string = 'public_repo'): Promise<void> {
   try {
-    device = await send<DeviceFlowStart>({ type: 'github/device-start', payload: { scope } });
+    stopPolling();
+    pollError = null;
+    resetPicker();
+    device = await send<DeviceFlowStart>({
+      type: 'github/device-start',
+      payload: { scope: scope === 'repo' ? 'repo' : 'public_repo' },
+    });
     await refresh();
+    // Poll immediately: the only thing the user must do is approve on GitHub.
+    beginPolling();
   } catch (error) {
     window.alert(errorMessage(error));
   }
@@ -268,20 +304,22 @@ function beginPolling(): void {
       if (outcome.status === 'ok') {
         stopPolling();
         device = null;
+        resetPicker();
         await refresh();
         return;
       }
       if (outcome.status === 'error') {
         stopPolling();
         device = null;
-        window.alert(outcome.message);
+        pollError = outcome.message;
         await refresh();
         return;
       }
       pollTimer = window.setTimeout(() => void tick(), intervalMs);
     } catch (error) {
       stopPolling();
-      window.alert(errorMessage(error));
+      pollError = errorMessage(error);
+      await refresh();
     }
   };
 
@@ -400,6 +438,429 @@ function repositorySection(overview: Overview): HTMLElement {
     'Choose an existing repository and branch. Category folders are created at the repository root, next to a .leetcode-tracker state folder.',
     children,
   );
+}
+
+// ------------------------------------------------------------- guided setup
+//
+// The first-run path is deliberately three steps and free of GitHub jargon:
+// Connect GitHub -> choose repository and branch -> Ready. Everything that a
+// returning user might tweak lives under "Advanced settings" below.
+
+function stepIndicator(active: 1 | 2 | 3): HTMLElement {
+  const labels = ['Connect GitHub', 'Choose repository', 'Ready'];
+  return el('ol', {
+    className: 'ls-steps',
+    attrs: { 'aria-label': 'Setup progress' },
+    children: labels.map((label, index) => {
+      const step = index + 1;
+      const state = step === active ? ' ls-step--active' : step < active ? ' ls-step--done' : '';
+      return el('li', {
+        className: `ls-step${state}`,
+        attrs: { 'aria-current': step === active ? 'step' : 'false' },
+        children: [
+          el('span', { className: 'ls-step__number', text: String(step) }),
+          el('span', { text: label }),
+        ],
+      });
+    }),
+  });
+}
+
+function setupCard(overview: Overview): HTMLElement {
+  if (overview.setup === 'needs-github') return connectStep();
+  if (overview.setup === 'needs-repository') return repositoryStep(overview);
+  return readyStep(overview);
+}
+
+function cancelDevice(): void {
+  stopPolling();
+  device = null;
+  void refresh();
+}
+
+async function copyAndOpen(current: DeviceFlowStart): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(current.userCode);
+  } catch {
+    // Clipboard access can be denied; the code is on screen either way.
+  }
+  window.open(current.verificationUri, '_blank', 'noopener');
+}
+
+function connectStep(): HTMLElement {
+  const children: (Node | null)[] = [stepIndicator(1)];
+
+  if (device === null) {
+    children.push(
+      el('p', {
+        className: 'ls-small ls-muted',
+        text: 'LeetSensei saves your Accepted solutions to a GitHub repository you choose. Sign in once — there is no password to type here and no token to copy.',
+      }),
+      el('div', {
+        className: 'ls-actions',
+        children: [
+          button('Connect GitHub', () => void startDevice('public_repo'), { variant: 'primary' }),
+        ],
+      }),
+    );
+  } else {
+    const current = device;
+    children.push(
+      el('h3', { text: 'Enter this code on GitHub' }),
+      el('div', { className: 'ls-code', text: current.userCode }),
+      el('p', {
+        className: 'ls-small ls-muted',
+        text: 'Approve the request in the GitHub tab. This page finishes by itself as soon as you do.',
+      }),
+      el('div', {
+        className: 'ls-actions',
+        children: [
+          button('Copy code & open GitHub', () => void copyAndOpen(current), {
+            variant: 'primary',
+          }),
+          button('Cancel', () => cancelDevice(), { small: true }),
+        ],
+      }),
+      el('div', { className: 'ls-small ls-muted', text: 'Waiting for approval…' }),
+    );
+  }
+
+  if (pollError !== null) children.push(note(pollError, 'err'));
+
+  return section('Connect GitHub', 'Step 1 of 3.', children);
+}
+
+function ensureRepositories(overview: Overview): void {
+  const key = overview.login ?? 'account';
+  if (reposLoading || reposRequestedFor === key) return;
+  reposRequestedFor = key;
+
+  void (async () => {
+    reposLoading = true;
+    reposError = null;
+    await refresh();
+    try {
+      repoList = await send<RepoListItem[]>({ type: 'github/list-repos' });
+    } catch (error) {
+      reposError = errorMessage(error);
+    } finally {
+      reposLoading = false;
+      await refresh();
+    }
+  })();
+}
+
+async function loadBranchesFor(repoFullName: string): Promise<void> {
+  if (branchesRequestedFor === repoFullName) return;
+  const [owner, repo] = repoFullName.split('/');
+  if (owner === undefined || repo === undefined) return;
+  branchesRequestedFor = repoFullName;
+
+  try {
+    branchList = await send<string[]>({ type: 'github/list-branches', payload: { owner, repo } });
+    if (selectedBranch !== '' && !branchList.includes(selectedBranch)) selectedBranch = '';
+  } catch (error) {
+    accessError = errorMessage(error);
+  }
+  await refresh();
+}
+
+function repositoryStep(overview: Overview): HTMLElement {
+  ensureRepositories(overview);
+  const children: (Node | null)[] = [stepIndicator(2)];
+
+  const finish = button('Finish setup', () => void finishSetup(), { variant: 'primary' });
+  const syncFinishState = (): void => {
+    finish.disabled = selectedRepo === null || selectedBranch === '';
+  };
+  syncFinishState();
+
+  if (reposLoading) {
+    children.push(loading('Loading your repositories…'));
+  } else if (repoList.length === 0) {
+    children.push(
+      note(
+        reposError ??
+          'No repositories with write access were found. Create one on GitHub, or type it in below.',
+        'warn',
+      ),
+    );
+  } else {
+    const repoSelect = el('select', { attrs: { 'aria-label': 'Destination repository' } });
+    repoSelect.append(el('option', { text: 'Select a repository…', attrs: { value: '' } }));
+    for (const repo of repoList) {
+      repoSelect.append(
+        el('option', {
+          text: `${repo.fullName}${repo.isPrivate ? ' (private)' : ''}`,
+          attrs: { value: repo.fullName },
+        }),
+      );
+    }
+    repoSelect.value = selectedRepo ?? '';
+    repoSelect.addEventListener('change', () => {
+      selectedRepo = repoSelect.value === '' ? null : repoSelect.value;
+      selectedBranch = '';
+      branchList = [];
+      branchesRequestedFor = null;
+      if (selectedRepo === null) {
+        void refresh();
+        return;
+      }
+      const preset = repoList.find((repo) => repo.fullName === selectedRepo)?.defaultBranch ?? '';
+      if (preset !== '') selectedBranch = preset;
+      void loadBranchesFor(selectedRepo);
+    });
+    children.push(field('Repository', repoSelect, 'Only repositories you can push to are listed.'));
+  }
+
+  if (selectedRepo !== null) {
+    const branchSelect = el('select', { attrs: { 'aria-label': 'Branch' } });
+    branchSelect.append(el('option', { text: 'Select a branch…', attrs: { value: '' } }));
+    for (const branch of branchList) {
+      branchSelect.append(el('option', { text: branch, attrs: { value: branch } }));
+    }
+    branchSelect.value = selectedBranch;
+    branchSelect.addEventListener('change', () => {
+      selectedBranch = branchSelect.value;
+      syncFinishState();
+    });
+    children.push(
+      field(
+        'Branch',
+        branchSelect,
+        'LeetSensei only ever appends commits; it never force-pushes or rewrites history.',
+      ),
+    );
+  }
+
+  children.push(el('div', { className: 'ls-actions', children: [finish] }));
+
+  if (accessError !== null) children.push(note(accessError, 'err'), privateRepoTip());
+  children.push(manualEntryDetails());
+
+  return section(
+    'Choose where solutions go',
+    'Step 2 of 3 · Pick the repository and branch LeetSensei should write to.',
+    children,
+  );
+}
+
+function manualEntryDetails(): HTMLElement {
+  const ownerInput = textInput('', 'your-github-username');
+  const repoInput = textInput('', 'solutions');
+  const branchInput = textInput('main', 'main');
+
+  return el('details', {
+    children: [
+      el('summary', { text: 'Enter a repository manually' }),
+      el('div', {
+        className: 'ls-stack',
+        children: [
+          el('div', {
+            className: 'ls-field-row',
+            children: [
+              field('Owner', ownerInput),
+              field('Repository', repoInput),
+              field('Branch', branchInput),
+            ],
+          }),
+          el('div', {
+            className: 'ls-actions',
+            children: [
+              button(
+                'Use this repository',
+                () =>
+                  void verifyAndSave(
+                    ownerInput.value.trim(),
+                    repoInput.value.trim(),
+                    branchInput.value.trim() || 'main',
+                  ),
+                { small: true },
+              ),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+function privateRepoTip(): HTMLElement {
+  return el('div', {
+    className: 'ls-stack',
+    children: [
+      el('p', {
+        className: 'ls-small ls-muted',
+        text: 'Is your repository private? LeetSensei starts with public-repository access only. Allow private repositories and sign in again — nothing wider is requested until you ask for it.',
+      }),
+      el('div', {
+        className: 'ls-actions',
+        children: [
+          button('Allow private repositories', () => void startDevice('repo'), { small: true }),
+        ],
+      }),
+    ],
+  });
+}
+
+async function finishSetup(): Promise<void> {
+  if (selectedRepo === null || selectedBranch === '') {
+    accessError = 'Choose a repository and a branch first.';
+    await refresh();
+    return;
+  }
+  const [owner, repo] = selectedRepo.split('/');
+  if (owner === undefined || repo === undefined) {
+    accessError = 'That repository name is not valid.';
+    await refresh();
+    return;
+  }
+  await verifyAndSave(owner, repo, selectedBranch);
+}
+
+/**
+ * Verifies the destination before saving it, so "Ready" always means the
+ * repository is reachable, writable and the branch exists. A 404 here almost
+ * always means a private repository the current token cannot see.
+ */
+async function verifyAndSave(owner: string, repo: string, branch: string): Promise<void> {
+  accessError = null;
+  try {
+    const check = await send<AccessCheck>({
+      type: 'github/check-access',
+      payload: { owner, repo, branch },
+    });
+    if (!check.canPush) {
+      accessError = `LeetSensei can read ${owner}/${repo} but cannot write to it. Choose a repository you can push to.`;
+    } else if (!check.branchExists) {
+      accessError = `The branch "${branch}" does not exist in ${owner}/${repo}. Pick an existing branch.`;
+    } else {
+      await send({
+        type: 'settings/save',
+        payload: { repoOwner: owner, repoName: repo, branch },
+      });
+      accessCheck = check;
+      selectedRepo = `${owner}/${repo}`;
+      selectedBranch = branch;
+    }
+  } catch (error) {
+    accessError = errorMessage(error);
+  }
+  await refresh();
+}
+
+function readyStep(overview: Overview): HTMLElement {
+  const destination = overview.repo;
+  const children: (Node | null)[] = [
+    stepIndicator(3),
+    note(
+      destination === null
+        ? 'Ready.'
+        : `Ready. Accepted solutions will be saved to ${destination.owner}/${destination.repo} on branch ${destination.branch}.`,
+      'ok',
+    ),
+  ];
+
+  if (accessCheck !== null) {
+    children.push(
+      el('div', {
+        className: 'ls-row ls-row--wrap',
+        children: [
+          badge('repository reachable', 'ok'),
+          accessCheck.canPush ? badge('write access', 'ok') : badge('no write access', 'err'),
+          accessCheck.branchExists ? badge('branch found', 'ok') : badge('branch missing', 'err'),
+        ],
+      }),
+    );
+  }
+
+  children.push(
+    el('div', {
+      className: 'ls-actions',
+      children: [
+        button('Open dashboard', () => openPage('dashboard'), { variant: 'primary' }),
+        button('Solve a problem on LeetCode', () =>
+          window.open('https://leetcode.com/problemset/', '_blank', 'noopener'),
+        ),
+      ],
+    }),
+  );
+
+  if (accessError !== null) children.push(note(accessError, 'err'), privateRepoTip());
+
+  children.push(
+    el('div', {
+      className: 'ls-actions',
+      children: [
+        button(
+          'Verify again',
+          () => {
+            if (destination === null) return;
+            void verifyAndSave(destination.owner, destination.repo, destination.branch);
+          },
+          { small: true },
+        ),
+        button('Disconnect', () => void disconnect(), { small: true, variant: 'danger' }),
+      ],
+    }),
+  );
+
+  return section(
+    'Ready',
+    'Step 3 of 3 · LeetSensei is watching LeetCode for Accepted submissions.',
+    children,
+  );
+}
+
+function statusCard(overview: Overview): HTMLElement {
+  return el('section', {
+    className: 'ls-card ls-stack',
+    children: [
+      el('div', {
+        className: 'ls-row',
+        children: [el('h2', { text: 'Status' }), phaseBadge(overview.status)],
+      }),
+      el('p', { className: 'ls-small', text: overview.status.message }),
+      el('div', {
+        className: 'ls-small ls-muted',
+        text: `Destination: ${overview.repo ? `${overview.repo.owner}/${overview.repo.repo} @ ${overview.repo.branch}` : 'not selected'} · Queued submissions: ${overview.queuedSubmissions}`,
+      }),
+      el('div', {
+        className: 'ls-actions',
+        children: [
+          button(
+            'Retry last sync',
+            () =>
+              void run(async () => {
+                await send({ type: 'sync/retry' });
+              }),
+            { small: true },
+          ),
+        ],
+      }),
+    ],
+  });
+}
+
+function advancedSettings(overview: Overview): HTMLElement {
+  return el('details', {
+    className: 'ls-card',
+    children: [
+      el('summary', { text: 'Advanced settings' }),
+      el('div', {
+        className: 'ls-stack',
+        children: [
+          accountSection(overview),
+          repositorySection(overview),
+          syncSection(overview),
+          revisionSection(overview),
+          dataSection(overview),
+          diagnosticsSection(),
+          privacySection(),
+        ],
+      }),
+    ],
+  });
 }
 
 function syncSection(overview: Overview): HTMLElement {
@@ -707,46 +1168,14 @@ function render(overview: Overview, pending: PendingJob | null): void {
   clear(app);
   app.setAttribute('aria-busy', 'false');
 
-  const status = el('section', {
-    className: 'ls-card ls-stack',
-    children: [
-      el('div', {
-        className: 'ls-row',
-        children: [el('h2', { text: 'Status' }), phaseBadge(overview.status)],
-      }),
-      el('p', { className: 'ls-small', text: overview.status.message }),
-      el('div', {
-        className: 'ls-small ls-muted',
-        text: `Destination: ${overview.repo ? `${overview.repo.owner}/${overview.repo.repo} @ ${overview.repo.branch}` : 'not selected'} · Queued submissions: ${overview.queuedSubmissions}`,
-      }),
-      el('div', {
-        className: 'ls-actions',
-        children: [
-          button(
-            'Retry last sync',
-            () =>
-              void run(async () => {
-                await send({ type: 'sync/retry' });
-              }),
-            { small: true },
-          ),
-        ],
-      }),
-    ],
-  });
+  app.append(setupCard(overview));
 
-  app.append(status);
   const banner = conflictBanner(pending);
   if (banner !== null) app.append(banner);
-  app.append(
-    accountSection(overview),
-    repositorySection(overview),
-    syncSection(overview),
-    revisionSection(overview),
-    dataSection(overview),
-    diagnosticsSection(),
-    privacySection(),
-  );
+
+  if (overview.setup === 'ready') app.append(statusCard(overview));
+
+  app.append(advancedSettings(overview));
 }
 
 async function refresh(): Promise<void> {

@@ -1,5 +1,5 @@
 import { coerceRawSubmission } from '../adapters/leetcode/parse';
-import { GITHUB_CLIENT_ID } from '../config';
+import { GITHUB_CLIENT_ID, ALLOW_PAT } from '../config';
 import { fetchViewer, pollDeviceOnce, startDeviceFlow } from '../github/auth';
 import { RestGithubClient } from '../github/client';
 import { ext, isFirefox } from '../shared/browser-api';
@@ -165,7 +165,6 @@ async function handle(message: UiMessage): Promise<unknown> {
     case 'github/device-poll': {
       const outcome = await pollDeviceOnce({
         clientId: GITHUB_CLIENT_ID,
-        scope: 'public_repo',
         deviceCode: message.payload.deviceCode,
       });
       if (outcome.status !== 'ok') return outcome;
@@ -173,6 +172,12 @@ async function handle(message: UiMessage): Promise<unknown> {
       return { status: 'ok' as const, ...(saved as Record<string, unknown>) };
     }
     case 'github/pat-save': {
+      if (!ALLOW_PAT) {
+        throw new LeetSenseiError(
+          'validation_failed',
+          'This build connects through GitHub sign-in only. Use Connect GitHub.',
+        );
+      }
       const token = message.payload.token.trim();
       if (token === '') {
         throw new LeetSenseiError('validation_failed', 'Paste a token first.');
@@ -192,6 +197,12 @@ async function handle(message: UiMessage): Promise<unknown> {
       return coordinator.listRepos();
     case 'github/list-branches':
       return coordinator.listBranches(message.payload.owner, message.payload.repo);
+    case 'github/check-access':
+      return coordinator.checkAccess(
+        message.payload.owner,
+        message.payload.repo,
+        message.payload.branch,
+      );
     case 'settings/load':
       return repository.loadSettings();
     case 'settings/save': {
@@ -252,6 +263,7 @@ const HANDLEABLE = new Set<string>([
   'github/verify',
   'github/list-repos',
   'github/list-branches',
+  'github/check-access',
   'settings/load',
   'settings/save',
   'data/restore',

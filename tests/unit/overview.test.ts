@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildOverview,
+  deriveSetupState,
   findOrphans,
   toProblemSummaries,
   toRevisionRows,
@@ -157,5 +158,56 @@ describe('buildOverview', () => {
     expect(overview.schedule.overdue).toBe(1);
     expect(overview.queuedSubmissions).toBe(1);
     expect(overview.lastSyncedAt).toBe(NOW);
+  });
+});
+
+describe('setup state', () => {
+  const configured = { ...defaultSettings(), repoOwner: 'student', repoName: 'solutions' };
+  const connectedAuth = {
+    token: 't',
+    login: 'student',
+    scopes: ['public_repo'],
+    method: 'device' as const,
+    savedAt: NOW,
+  };
+
+  it('walks through the three first-run states', () => {
+    expect(deriveSetupState(false, defaultSettings())).toBe('needs-github');
+    expect(deriveSetupState(true, defaultSettings())).toBe('needs-repository');
+    expect(deriveSetupState(true, configured)).toBe('ready');
+  });
+
+  it('treats a half-configured destination as not ready', () => {
+    expect(deriveSetupState(true, { ...defaultSettings(), repoOwner: 'student' })).toBe(
+      'needs-repository',
+    );
+    expect(deriveSetupState(true, { ...defaultSettings(), repoName: 'solutions' })).toBe(
+      'needs-repository',
+    );
+  });
+
+  it('keeps needing GitHub even when a repository is configured', () => {
+    expect(deriveSetupState(false, configured)).toBe('needs-github');
+  });
+
+  it('is surfaced on the overview so the popup and options agree', () => {
+    const build = (
+      auth: typeof connectedAuth | ReturnType<typeof emptyAuth>,
+      settings = configured,
+    ) =>
+      buildOverview({
+        settings,
+        manifest: createEmptyManifest(NOW),
+        revisions: createEmptyRevisionStore(NOW),
+        syncState: emptySyncState(),
+        auth,
+        pending: null,
+        now: NOW_DATE,
+        version: '1.0.0',
+      });
+
+    expect(build(emptyAuth()).setup).toBe('needs-github');
+    expect(build(connectedAuth, defaultSettings()).setup).toBe('needs-repository');
+    expect(build(connectedAuth).setup).toBe('ready');
   });
 });

@@ -39,6 +39,17 @@ export interface RevisionRow extends ProblemSummary {
   reviewCount: number;
 }
 
+/**
+ * Where the user is in first-time setup. Drives both the options page and the
+ * popup so they always agree on the next action.
+ */
+export type SetupState = 'needs-github' | 'needs-repository' | 'ready';
+
+export function deriveSetupState(connected: boolean, settings: Settings): SetupState {
+  if (!connected) return 'needs-github';
+  return isRepoConfigured(settings) ? 'ready' : 'needs-repository';
+}
+
 export interface Overview {
   connected: boolean;
   login: string | null;
@@ -55,6 +66,8 @@ export interface Overview {
   pendingConflicts: { path: string; state: string; message: string }[];
   queuedSubmissions: number;
   version: string;
+  /** The single next step in first-time setup. */
+  setup: SetupState;
 }
 
 function lastRatingOf(store: RevisionStore, problemId: string): string | null {
@@ -168,5 +181,6 @@ export function buildOverview(input: {
     pendingConflicts: pending?.conflicts ?? [],
     queuedSubmissions: syncState.queued?.length ?? 0,
     version: input.version,
+    setup: deriveSetupState(connected, settings),
   };
 }
