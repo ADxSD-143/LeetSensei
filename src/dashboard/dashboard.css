@@ -1,0 +1,36 @@
+.ls-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#header .ls-brand img {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+}
+
+.ls-filters {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+}
+
+@media (max-width: 720px) {
+  .ls-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.ls-table-wrap {
+  overflow-x: auto;
+}
+
+.ls-review-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}

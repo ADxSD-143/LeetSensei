@@ -1,0 +1,32 @@
+.ls-page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#header .ls-brand img {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+}
+
+.ls-field-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.ls-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  background: var(--ls-surface-alt);
+  border: 1px dashed var(--ls-border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  display: inline-block;
+}
