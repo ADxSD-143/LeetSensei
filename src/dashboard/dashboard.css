@@ -73,37 +73,40 @@
   animation: ls-fog-drift 52s ease-in-out infinite alternate;
 }
 
-/* A restrained moonlit blade glint gives the still illustration one intentional motion cue. */
-.ls-hero__art::after {
+/* A visible, restrained moonlit blade glint. Keep it on the hero stacking layer,
+   above the ink veil; a pseudo-element inside the artwork layer was hidden by it. */
+.ls-hero::before {
   content: '';
   position: absolute;
-  z-index: 1;
-  top: 18%;
+  z-index: 2;
+  top: 24%;
   right: 19%;
-  width: clamp(100px, 16vw, 230px);
-  height: 1px;
+  width: clamp(110px, 17vw, 240px);
+  height: 2px;
   pointer-events: none;
   opacity: 0;
-  background: linear-gradient(90deg, transparent, rgba(233, 226, 210, 0.78), transparent);
-  box-shadow: 0 0 12px rgba(233, 226, 210, 0.35);
+  background: linear-gradient(90deg, transparent, rgba(245, 239, 222, 0.95), transparent);
+  box-shadow:
+    0 0 18px rgba(233, 226, 210, 0.7),
+    0 0 38px rgba(233, 226, 210, 0.25);
   transform: rotate(-53deg);
   transform-origin: center;
-  animation: ls-blade-glint 9s ease-in-out 2s infinite;
+  animation: ls-blade-glint 7s ease-in-out 1s infinite;
 }
 
 @keyframes ls-blade-glint {
   0%,
-  72%,
+  66%,
   100% {
     opacity: 0;
-    translate: -12px 8px;
+    translate: -18px 12px;
   }
-  76% {
-    opacity: 0.8;
+  72% {
+    opacity: 0.95;
   }
-  82% {
-    opacity: 0.18;
-    translate: 12px -8px;
+  79% {
+    opacity: 0.28;
+    translate: 18px -12px;
   }
 }
 
@@ -135,7 +138,7 @@
 
 .ls-hero__content {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   padding: 22px 26px 24px;
   display: flex;
   flex-direction: column;
@@ -813,7 +816,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ls-hero__art::after {
+  .ls-hero::before {
     animation: none !important;
     opacity: 0;
   }
