@@ -37,7 +37,9 @@ export function defaultSettings(): Settings {
     fallbackCategory: FALLBACK_CATEGORY,
     revisionIntervals: [...DEFAULT_REVISION_INTERVALS],
     authScope: 'public_repo',
-    theme: 'auto',
+    // The cinematic dark theme is the intended first impression; "auto" and
+    // "light" remain selectable, and existing stored preferences are respected.
+    theme: 'dark',
   };
 }
 

@@ -56,7 +56,7 @@ describe('normalizeSettings', () => {
   it('rejects unknown enum values and repairs an empty branch', () => {
     const settings = normalizeSettings({ authScope: 'everything', theme: 'neon', branch: '   ' });
     expect(settings.authScope).toBe('public_repo');
-    expect(settings.theme).toBe('auto');
+    expect(settings.theme).toBe('dark');
     expect(settings.branch).toBe('main');
   });
 

@@ -138,6 +138,15 @@ async function copyStatic(outdir) {
   }
   await cp(join(ROOT, 'icons'), join(outdir, 'icons'), { recursive: true });
   copied.push('icons/*.png');
+
+  // Original vector artwork: logo family and the layered hero.
+  const artDir = join(ROOT, 'src/ui/art');
+  if (!existsSync(artDir)) {
+    throw new Error('Missing artwork directory: src/ui/art');
+  }
+  await cp(artDir, join(outdir, 'art'), { recursive: true });
+  copied.push('art/*.svg');
+
   return copied;
 }
 

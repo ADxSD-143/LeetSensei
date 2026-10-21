@@ -169,6 +169,29 @@ The state lives locally as the primary copy and is mirrored to
 Both manifests are produced by one function, `src/manifest/build-manifest.ts`, which is also
 unit-tested (permissions, CSP, background shape, no `<all_urls>`).
 
+## Progress and presentation
+
+The dashboard, popup and options page are presentation layers over one message,
+`data/overview`. They hold no state of their own beyond view filters.
+
+Progression is a **projection, never a store**. `src/core/progress.ts` derives XP, a named rank
+and a review streak from the review history that already exists in the revision store:
+
+| Value  | Derivation                                                                     |
+| ------ | ------------------------------------------------------------------------------ |
+| XP     | Sum over recorded reviews: `again` 1, `hard` 3, `easy` 5                       |
+| Rank   | Cumulative XP thresholds, Ronin → Ashigaru → Bushi → Samurai → Kenshi → Sensei |
+| Streak | Consecutive local days with at least one review, ending today or yesterday     |
+
+Because it is computed, a repository restore can never leave a stale counter behind, and the UI
+states where the number comes from. The module is pure and unit tested (boundaries, empty
+history, streak gaps, timezone-safe local days).
+
+Presentation assets are original SVG in `src/ui/art/` (logo family and the four hero layers),
+copied into each build by `scripts/build.mjs`. `verify:dist` fails if a stylesheet references a
+missing asset. All motion is CSS transforms and opacity, guarded by `prefers-reduced-motion` and
+disabled on coarse pointers; no animation library is bundled and no web font is downloaded.
+
 ## Testing strategy
 
 - Everything under `core/` is pure and unit tested.

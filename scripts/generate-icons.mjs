@@ -12,20 +12,17 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = join(HERE, '..', 'icons');
 const SIZES = [16, 32, 48, 128];
 
-const BACKGROUND = [11, 15, 25]; // deep obsidian ink
-const SUN_COLOR = [235, 28, 70]; // Japanese scarlet / Hinomaru crimson
-const AURA_COLOR = [0, 225, 255]; // Katana neon cyan energy aura
-const BLADE_COLOR = [255, 255, 255]; // Katana blade steel white
-const GOLD_ACCENT = [255, 195, 45]; // Golden ki accent
+const SEAL_COLOR = [230, 57, 70]; // vermilion seal ground
+const SEAL_SHADE = [165, 28, 40]; // deeper seal toward the bottom
+const MOON_COLOR = [246, 241, 228]; // ivory crescent
+const BLADE_COLOR = [255, 255, 255]; // polished steel
+const INK_COLOR = [11, 12, 16]; // obsidian, for the blade separation shadow
 
-/** Katana check-slash strokes in unit space: cutting down-left to up-right. */
-const KATANA_STROKES = [
-  [0.22, 0.54, 0.42, 0.73],
-  [0.42, 0.73, 0.8, 0.26],
-];
+/** Katana stroke in unit space: lower-left to upper-right. */
+const BLADE_STROKE = [0.22, 0.74, 0.78, 0.26];
 
-/** Sensei headband / kanji horizon stroke: represents discipline and focus. */
-const HEADBAND_STROKE = [0.28, 0.26, 0.72, 0.26];
+/** Crescent moon: a disc with an offset disc subtracted. */
+const MOON = { cx: 0.47, cy: 0.43, r: 0.3, cutCx: 0.61, cutCy: 0.35, cutR: 0.27 };
 
 const CRC_TABLE = (() => {
   const table = new Int32Array(256);
@@ -113,28 +110,18 @@ function over(bottom, top) {
 
 function renderIcon(size) {
   const rgba = Buffer.alloc(size * size * 4);
-  const strokes = KATANA_STROKES.map(([ax, ay, bx, by]) => [
-    ax * size,
-    ay * size,
-    bx * size,
-    by * size,
-  ]);
-  const headband = [
-    HEADBAND_STROKE[0] * size,
-    HEADBAND_STROKE[1] * size,
-    HEADBAND_STROKE[2] * size,
-    HEADBAND_STROKE[3] * size,
-  ];
 
   const cornerRadius = 0.22 * size;
-  const sunRadius = 0.34 * size;
-  const sunCenterY = size * 0.5;
-  const sunCenterX = size * 0.5;
+  const moonCx = MOON.cx * size;
+  const moonCy = MOON.cy * size;
+  const moonR = MOON.r * size;
+  const cutCx = MOON.cutCx * size;
+  const cutCy = MOON.cutCy * size;
+  const cutR = MOON.cutR * size;
 
-  const auraRadius = Math.max(1.2, 0.088 * size);
-  const bladeRadius = Math.max(0.7, 0.048 * size);
-  const headbandAuraRadius = Math.max(0.8, 0.042 * size);
-  const headbandRadius = Math.max(0.5, 0.024 * size);
+  const [ax, ay, bx, by] = BLADE_STROKE.map((value) => value * size);
+  const bladeRadius = Math.max(0.85, 0.05 * size);
+  const underlayRadius = Math.max(1.4, 0.085 * size);
 
   for (let y = 0; y < size; y += 1) {
     for (let x = 0; x < size; x += 1) {
@@ -151,48 +138,30 @@ function renderIcon(size) {
       const bgAlpha = coverage(bgDist);
       if (bgAlpha <= 0) continue;
 
-      let pixel = [BACKGROUND[0], BACKGROUND[1], BACKGROUND[2], bgAlpha];
+      // Seal ground with a soft vertical shade.
+      const shade = Math.min(1, Math.max(0, py / size)) * 0.18;
+      const groundR = Math.round(SEAL_COLOR[0] * (1 - shade) + SEAL_SHADE[0] * shade);
+      const groundG = Math.round(SEAL_COLOR[1] * (1 - shade) + SEAL_SHADE[1] * shade);
+      const groundB = Math.round(SEAL_COLOR[2] * (1 - shade) + SEAL_SHADE[2] * shade);
+      let pixel = [groundR, groundG, groundB, bgAlpha];
 
-      const rimDist = Math.abs(bgDist + 1.2);
-      const rimAlpha = Math.max(0, 1 - rimDist / 1.5) * 0.45 * bgAlpha;
-      pixel = over(pixel, [AURA_COLOR[0], AURA_COLOR[1], AURA_COLOR[2], rimAlpha]);
-
-      const sunDist = Math.hypot(px - sunCenterX, py - sunCenterY) - sunRadius;
-      const sunAlpha = coverage(sunDist) * bgAlpha;
-      if (sunAlpha > 0) {
-        const sunGrad = Math.max(0, Math.min(1, (py - (sunCenterY - sunRadius)) / (sunRadius * 2)));
-        const sunR = Math.round(SUN_COLOR[0] * (1 - sunGrad * 0.15));
-        const sunG = Math.round(SUN_COLOR[1] + sunGrad * 20);
-        const sunB = Math.round(SUN_COLOR[2] + sunGrad * 15);
-        pixel = over(pixel, [sunR, sunG, sunB, sunAlpha]);
+      // Crescent: inside the disc, outside the offset disc.
+      const discDist = Math.hypot(px - moonCx, py - moonCy) - moonR;
+      const cutDist = Math.hypot(px - cutCx, py - cutCy) - cutR;
+      const moonAlpha = coverage(discDist) * (1 - coverage(cutDist)) * bgAlpha;
+      if (moonAlpha > 0) {
+        pixel = over(pixel, [MOON_COLOR[0], MOON_COLOR[1], MOON_COLOR[2], moonAlpha]);
       }
 
-      if (size >= 24) {
-        const hbDist = segmentDistance(px, py, headband[0], headband[1], headband[2], headband[3]);
-        const hbAuraAlpha = coverage(hbDist - headbandAuraRadius) * 0.7 * bgAlpha;
-        pixel = over(pixel, [GOLD_ACCENT[0], GOLD_ACCENT[1], GOLD_ACCENT[2], hbAuraAlpha]);
-        const hbAlpha = coverage(hbDist - headbandRadius) * bgAlpha;
-        pixel = over(pixel, [BLADE_COLOR[0], BLADE_COLOR[1], BLADE_COLOR[2], hbAlpha]);
+      // Blade: an ink underlay separates it from the moon, then steel on top.
+      const bladeDist = segmentDistance(px, py, ax, ay, bx, by);
+      const underlayAlpha = coverage(bladeDist - underlayRadius) * bgAlpha;
+      if (underlayAlpha > 0) {
+        pixel = over(pixel, [INK_COLOR[0], INK_COLOR[1], INK_COLOR[2], underlayAlpha * 0.5]);
       }
-
-      let auraAlpha = 0;
-      let bladeAlpha = 0;
-      for (const [ax, ay, bx, by] of strokes) {
-        const dist = segmentDistance(px, py, ax, ay, bx, by);
-        auraAlpha = Math.max(auraAlpha, coverage(dist - auraRadius));
-        bladeAlpha = Math.max(bladeAlpha, coverage(dist - bladeRadius));
-      }
-
-      if (auraAlpha > 0) {
-        pixel = over(pixel, [
-          AURA_COLOR[0],
-          AURA_COLOR[1],
-          AURA_COLOR[2],
-          auraAlpha * 0.85 * bgAlpha,
-        ]);
-      }
+      const bladeAlpha = coverage(bladeDist - bladeRadius) * bgAlpha;
       if (bladeAlpha > 0) {
-        pixel = over(pixel, [BLADE_COLOR[0], BLADE_COLOR[1], BLADE_COLOR[2], bladeAlpha * bgAlpha]);
+        pixel = over(pixel, [BLADE_COLOR[0], BLADE_COLOR[1], BLADE_COLOR[2], bladeAlpha]);
       }
 
       const offset = (y * size + x) * 4;

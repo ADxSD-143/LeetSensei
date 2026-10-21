@@ -3,6 +3,7 @@ import type { ReviewRating } from '../core/model';
 import type { DueState } from '../core/schedule';
 import type { RevisionStore } from '../core/revisions';
 import type { PendingJob } from '../storage/repository';
+import { XP_BY_RATING } from '../core/progress';
 import { errorMessage, openPage, send } from '../ui/api';
 import {
   applyTheme,
@@ -10,11 +11,9 @@ import {
   button,
   clear,
   el,
-  emptyState,
   externalLink,
   formatDate,
   formatDateTime,
-  loading,
   note,
   qs,
   toDateInputValue,
@@ -22,8 +21,12 @@ import {
 } from '../ui/dom';
 
 /**
- * Dashboard: solved problems, the revision queue, review history and the
- * conflict resolution surface. Text is always set as text content.
+ * Dashboard: the quest board.
+ *
+ * Everything is driven by real state from `data/overview` — problems, review
+ * history, conflicts and sync status. Rank and XP are derived from the recorded
+ * review events (`overview.progress`), never stored separately, so they can
+ * never drift from the data. All text is set as text content.
  */
 
 interface OverviewResponse {
@@ -46,6 +49,39 @@ const app = qs<HTMLElement>('#app');
 
 const filters: Filters = { query: '', tag: '', language: '', due: 'all' };
 let activeTab: TabId = 'problems';
+let hasRevealed = false;
+let lastRenderedTab: TabId | null = null;
+let flash: { text: string; tone: NoteTone } | null = null;
+
+/** Tones a note can carry; 'neutral' is for badges only. */
+type NoteTone = Exclude<Tone, 'neutral'>;
+
+/** Confirmation shown once, after the next render. */
+function setFlash(text: string, tone: NoteTone = 'ok'): void {
+  flash = { text, tone };
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+/** Ink-mist loading state. */
+function loadingState(): HTMLElement {
+  return el('div', {
+    className: 'ls-loading',
+    attrs: { role: 'status' },
+    children: [
+      el('div', {
+        className: 'ls-mist',
+        attrs: { 'aria-hidden': 'true' },
+        children: [el('span'), el('span'), el('span')],
+      }),
+      el('span', { text: 'Reading the journal…' }),
+    ],
+  });
+}
 
 const DUE_TONE: Record<DueState, Tone> = {
   overdue: 'err',
@@ -59,11 +95,53 @@ const DUE_LABEL: Record<DueState, string> = {
   upcoming: 'Upcoming',
 };
 
+const TAB_META: Record<TabId, { kanji: string; label: string }> = {
+  problems: { kanji: '課題', label: 'Quests' },
+  reviews: { kanji: '鍛錬', label: 'Objectives' },
+  conflicts: { kanji: '差分', label: 'Disputes' },
+  history: { kanji: '記録', label: 'Journal' },
+};
+
+const DIFFICULTY_SEAL: Record<string, string> = {
+  Easy: 'ls-seal--easy',
+  Medium: 'ls-seal--medium',
+  Hard: 'ls-seal--hard',
+};
+
+function reducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function finePointer(): boolean {
+  return window.matchMedia('(pointer: fine)').matches;
+}
+
 function phaseTone(phase: Overview['status']['phase']): Tone {
   if (phase === 'failed') return 'err';
   if (phase === 'done') return 'ok';
   if (phase === 'awaiting-decision') return 'warn';
   return 'info';
+}
+
+function greetingFor(now: Date): { kanji: string; text: string } {
+  const hour = now.getHours();
+  if (hour < 5) return { kanji: '深夜', text: 'Late night' };
+  if (hour < 12) return { kanji: '朝', text: 'Good morning' };
+  if (hour < 17) return { kanji: '昼', text: 'Good afternoon' };
+  if (hour < 21) return { kanji: '夕', text: 'Good evening' };
+  return { kanji: '夜', text: 'Night falls' };
+}
+
+/** Clamps a 0..1 ratio for use as a CSS custom property. */
+function ratioValue(ratio: number): string {
+  return String(Math.max(0, Math.min(1, ratio)));
+}
+
+function difficultySeal(difficulty: string): HTMLElement {
+  return el('span', {
+    className: `ls-seal ${DIFFICULTY_SEAL[difficulty] ?? 'ls-seal--unknown'}`,
+    text: difficulty,
+  });
 }
 
 function filteredProblems(overview: Overview): ProblemSummary[] {
@@ -91,126 +169,411 @@ function filteredProblems(overview: Overview): ProblemSummary[] {
   });
 }
 
-const TAB_KANJI: Record<TabId, string> = {
-  problems: '課題',
-  reviews: '鍛錬',
-  conflicts: '差分',
-  history: '記録',
-};
+// ------------------------------------------------------------------- header
 
-function tabButton(id: TabId, label: string, count?: number): HTMLButtonElement {
-  const kanji = TAB_KANJI[id];
-  const countStr = count === undefined ? '' : ` (${count})`;
-  const node = el('button', {
-    className: 'ls-tab',
-    children: [
-      el('span', { className: 'ls-tab-kanji', text: kanji }),
-      el('span', { text: `${label}${countStr}` }),
-    ],
-    attrs: { type: 'button', role: 'tab', 'aria-selected': String(activeTab === id) },
-  });
-  node.addEventListener('click', () => {
-    activeTab = id;
-    void refresh();
-  });
-  return node;
+function renderHeader(overview: Overview): void {
+  clear(header);
+
+  header.append(
+    el('div', {
+      className: 'ls-header',
+      children: [
+        el('div', {
+          className: 'ls-brand',
+          children: [
+            el('img', {
+              className: hasRevealed ? '' : 'ls-mark-draw',
+              attrs: { src: 'icons/icon-48.png', alt: '' },
+            }),
+            el('div', {
+              className: 'ls-brand-info',
+              children: [
+                el('div', {
+                  className: 'ls-brand-title',
+                  children: [
+                    el('span', { text: 'LeetSensei' }),
+                    el('span', {
+                      className: hasRevealed ? 'ls-tag-badge' : 'ls-tag-badge ls-seal-pop',
+                      text: '先生',
+                      attrs: { 'aria-hidden': 'true' },
+                    }),
+                  ],
+                }),
+                el('div', {
+                  className: 'ls-brand-sub',
+                  text: `Shadow Ronin · revision dojo · v${overview.version}`,
+                }),
+              ],
+            }),
+          ],
+        }),
+        el('div', {
+          className: 'ls-actions',
+          children: [
+            button('Options', () => openPage('options'), { small: true }),
+            button(
+              'Retry sync',
+              () =>
+                void run(async () => {
+                  await send({ type: 'sync/retry' });
+                  setFlash('Sync requested', 'info');
+                }),
+              { small: true },
+            ),
+          ],
+        }),
+      ],
+    }),
+  );
 }
 
-function problemTable(problems: ProblemSummary[]): HTMLElement {
-  if (problems.length === 0) {
-    return emptyState(
-      'No problems match the current filters. Sync an Accepted submission to see it here.',
-    );
-  }
-  const body = el('tbody');
-  for (const problem of problems) {
-    const titleCell = el('td');
-    if (problem.url !== '') titleCell.append(externalLink(problem.url, problem.title));
-    else titleCell.append(el('span', { text: problem.title }));
-    titleCell.append(
-      el('div', {
-        className: 'ls-small ls-muted',
-        text: `#${problem.problemId} · ${problem.slug}`,
-      }),
-    );
+// --------------------------------------------------------------------- hero
 
-    body.append(
-      el('tr', {
-        children: [
-          titleCell,
-          el('td', {
-            children: [
-              badge(
-                problem.difficulty === 'Easy'
-                  ? '易 Easy'
-                  : problem.difficulty === 'Hard'
-                    ? '難 Hard'
-                    : '中 Medium',
-                problem.difficulty === 'Easy'
-                  ? 'ok'
-                  : problem.difficulty === 'Hard'
-                    ? 'err'
-                    : 'neutral',
-              ),
-            ],
-          }),
-          el('td', {
-            className: 'ls-small',
-            text: problem.officialTags.length > 0 ? problem.officialTags.join(', ') : '—',
-          }),
-          el('td', {
-            className: 'ls-small',
-            text: problem.languages.length > 0 ? problem.languages.join(', ') : '—',
-          }),
-          el('td', { className: 'ls-small', text: String(problem.categories.length) }),
-          el('td', { className: 'ls-small', text: String(problem.fileCount) }),
-          el('td', {
-            className: 'ls-small',
-            children: [
-              problem.dueState === null
-                ? el('span', { text: '—' })
-                : badge(DUE_LABEL[problem.dueState], DUE_TONE[problem.dueState]),
-              el('div', { className: 'ls-muted', text: formatDate(problem.nextReviewAt) }),
-            ],
-          }),
-          el('td', {
-            children: [
-              problem.metadataIncomplete
-                ? badge('incomplete metadata', 'warn')
-                : badge('synced', 'ok'),
-            ],
-          }),
-        ],
-      }),
-    );
-  }
+function heroArt(): HTMLElement {
+  const layer = (file: string, modifier: string): HTMLElement =>
+    el('img', {
+      className: `ls-hero__layer ${modifier}`,
+      attrs: { src: `art/${file}`, alt: '', 'aria-hidden': 'true', decoding: 'async' },
+    });
 
   return el('div', {
-    className: 'ls-table-wrap',
+    className: 'ls-hero__art',
+    attrs: { 'aria-hidden': 'true' },
     children: [
-      el('table', {
-        className: 'ls-table',
+      layer('hero-moon.svg', 'ls-hero__layer--moon'),
+      layer('hero-ridges.svg', 'ls-hero__layer--ridges'),
+      layer('hero-ronin.svg', 'ls-hero__layer--ronin'),
+      layer('hero-fog.svg', 'ls-hero__layer--fog'),
+    ],
+  });
+}
+
+function hero(overview: Overview): HTMLElement {
+  const now = new Date();
+  const greeting = greetingFor(now);
+  const dueNow = overview.schedule.overdue + overview.schedule.dueToday;
+  const focus = overview.revisions[0] ?? null;
+  const needsSetup = overview.setup !== 'ready';
+
+  const summary = needsSetup
+    ? 'Connect GitHub and choose where solutions should go to open the dojo.'
+    : dueNow > 0
+      ? `${dueNow} technique${dueNow === 1 ? '' : 's'} await attention${focus ? ` · next up: ${focus.title}` : ''}.`
+      : 'Nothing is due right now. Solve a new problem to feed the journal.';
+
+  const primary = needsSetup
+    ? button('Finish setup', () => openPage('options'), { variant: 'primary' })
+    : button('Begin today’s training', () => selectTab('reviews'), { variant: 'primary' });
+
+  const secondary = needsSetup
+    ? button('Open options', () => openPage('options'))
+    : button('Open quest board', () => selectTab('problems'));
+
+  return el('section', {
+    className: 'ls-hero ls-reveal',
+    attrs: { 'aria-label': 'Today' },
+    children: [
+      heroArt(),
+      el('div', {
+        className: 'ls-hero__content',
         children: [
-          el('thead', {
+          el('div', {
+            className: 'ls-hero__eyebrow',
             children: [
-              el('tr', {
+              el('span', { text: greeting.kanji, attrs: { 'aria-hidden': 'true' } }),
+              el('span', { text: 'Shadow Ronin' }),
+            ],
+          }),
+          el('h1', { className: 'ls-hero__title', text: `${greeting.text}, ronin.` }),
+          el('p', {
+            className: 'ls-hero__meta',
+            children: [
+              el('span', {
                 children: [
-                  el('th', { attrs: { scope: 'col' }, text: 'Problem' }),
-                  el('th', { attrs: { scope: 'col' }, text: 'Difficulty' }),
-                  el('th', { attrs: { scope: 'col' }, text: 'Topics' }),
-                  el('th', { attrs: { scope: 'col' }, text: 'Languages' }),
-                  el('th', { attrs: { scope: 'col' }, text: 'Categories' }),
-                  el('th', { attrs: { scope: 'col' }, text: 'Files' }),
-                  el('th', { attrs: { scope: 'col' }, text: 'Next review' }),
-                  el('th', { attrs: { scope: 'col' }, text: 'State' }),
+                  el('strong', {
+                    text: now.toLocaleDateString(undefined, {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                    }),
+                  }),
+                ],
+              }),
+              el('span', {
+                children: [
+                  el('strong', { text: String(overview.problems.length) }),
+                  el('span', { text: ' quests' }),
+                ],
+              }),
+              el('span', {
+                children: [
+                  el('strong', { text: `${overview.progress.streakDays}d` }),
+                  el('span', { text: ' streak' }),
+                ],
+              }),
+              badge(overview.status.phase, phaseTone(overview.status.phase)),
+            ],
+          }),
+          el('p', { className: 'ls-hero__summary', text: summary }),
+          el('div', { className: 'ls-hero__cta', children: [primary, secondary] }),
+        ],
+      }),
+    ],
+  });
+}
+
+// --------------------------------------------------------------- status panel
+
+function statusPanel(overview: Overview): HTMLElement {
+  const progress = overview.progress;
+  const dueNow = overview.schedule.overdue + overview.schedule.dueToday;
+
+  const ring = el('div', {
+    className: 'ls-level-ring',
+    attrs: { role: 'img', 'aria-label': `Level ${progress.level}, rank ${progress.rank}` },
+    children: [
+      el('div', {
+        className: 'ls-level-ring__inner',
+        children: [
+          el('span', { className: 'ls-level-ring__value', text: String(progress.level) }),
+          el('span', { className: 'ls-level-ring__cap', text: 'rank' }),
+        ],
+      }),
+    ],
+  });
+  ring.style.setProperty('--p', ratioValue(progress.ratio));
+
+  const fill = el('div', { className: 'ls-meter__fill' });
+  fill.style.setProperty('--p', ratioValue(progress.ratio));
+
+  const meter = el('div', {
+    className: 'ls-meter',
+    attrs: {
+      role: 'progressbar',
+      'aria-label': 'Rank progress',
+      'aria-valuemin': '0',
+      'aria-valuemax': String(Math.max(1, progress.rankSpan)),
+      'aria-valuenow': String(progress.rankXp),
+    },
+    children: [fill],
+  });
+
+  const rankLine =
+    progress.nextRank === null
+      ? `${progress.xp} XP · highest rank reached`
+      : `${progress.rankXp} / ${progress.rankSpan} XP · ${progress.xpToNextRank} to ${progress.nextRank}`;
+
+  const stat = (value: string, label: string): HTMLElement =>
+    el('div', {
+      className: 'ls-stat',
+      children: [
+        el('span', { className: 'ls-stat__value', text: value }),
+        el('span', { className: 'ls-stat__label', text: label }),
+      ],
+    });
+
+  const syncLine = [
+    overview.connected
+      ? `${overview.login ?? 'GitHub'}${overview.repo ? ` · ${overview.repo.owner}/${overview.repo.repo}@${overview.repo.branch}` : ' · no repository selected'}`
+      : 'Not connected to GitHub',
+    `last sync ${formatDateTime(overview.lastSyncedAt)}`,
+    overview.queuedSubmissions > 0 ? `${overview.queuedSubmissions} waiting to sync` : null,
+  ]
+    .filter((entry): entry is string => entry !== null)
+    .join(' · ');
+
+  return el('section', {
+    className: 'ls-card ls-reveal ls-stack',
+    attrs: { 'aria-label': 'Status' },
+    children: [
+      el('div', {
+        className: 'ls-status',
+        children: [
+          el('div', {
+            className: 'ls-level',
+            children: [
+              ring,
+              el('div', {
+                className: 'ls-level__body',
+                children: [
+                  el('span', { className: 'ls-level__rank', text: progress.rank }),
+                  el('span', { className: 'ls-level__next', text: rankLine }),
+                  el('span', { className: 'ls-level__next', text: `${progress.xp} XP total` }),
                 ],
               }),
             ],
           }),
-          body,
+          el('div', {
+            className: 'ls-stats',
+            children: [
+              stat(`${progress.streakDays}`, 'day streak'),
+              stat(`${progress.reviews}`, 'reviews'),
+              stat(`${overview.problems.length}`, 'quests'),
+              stat(`${dueNow}`, 'due now'),
+            ],
+          }),
+        ],
+      }),
+      meter,
+      el('p', {
+        className: 'ls-small ls-muted',
+        text: `Rank is calculated from your ${progress.reviews} recorded review${progress.reviews === 1 ? '' : 's'}; nothing extra is stored.`,
+      }),
+      el('p', { className: 'ls-small ls-muted', text: syncLine }),
+    ],
+  });
+}
+
+// ---------------------------------------------------------------- quest board
+
+function rateQuest(card: HTMLElement, problemId: string, rating: ReviewRating): void {
+  // The action is dispatched immediately. The stamp is feedback, and the refresh
+  // waits only long enough for it to land (skipped entirely when motion is off).
+  const quiet = reducedMotion();
+  card.classList.add('is-completing');
+  setFlash(`${problemId} rated ${rating} · +${XP_BY_RATING[rating]} XP`);
+  void run(async () => {
+    await send({ type: 'revision/review', payload: { problemId, rating } });
+    if (!quiet) await delay(240);
+  });
+}
+
+function questCard(problem: ProblemSummary): HTMLElement {
+  const dueState = problem.dueState;
+  const modifier =
+    dueState === 'overdue'
+      ? ' ls-quest--overdue'
+      : dueState === 'due-today'
+        ? ' ls-quest--due'
+        : dueState === 'upcoming'
+          ? ' ls-quest--upcoming'
+          : '';
+
+  const card = el('article', { className: `ls-quest ls-tilt${modifier}` });
+
+  const title: HTMLElement =
+    problem.url !== ''
+      ? externalLink(problem.url, problem.title)
+      : el('span', { text: problem.title });
+  title.className = 'ls-quest__title';
+
+  const actions: (Node | null)[] = [];
+  if (dueState === 'overdue' || dueState === 'due-today') {
+    for (const [rating, label, btnClass] of [
+      ['again', 'Again', 'ls-btn-again'],
+      ['hard', 'Hard', 'ls-btn-hard'],
+      ['easy', 'Easy', 'ls-btn-easy'],
+    ] as const) {
+      const action = button(label, () => rateQuest(card, problem.problemId, rating), {
+        small: true,
+      });
+      action.classList.add(btnClass);
+      actions.push(action);
+    }
+  }
+  if (problem.url !== '') {
+    actions.push(
+      button('Open', () => window.open(problem.url, '_blank', 'noopener'), { small: true }),
+    );
+  }
+
+  card.append(
+    el('div', {
+      className: 'ls-quest__head',
+      children: [title, difficultySeal(problem.difficulty)],
+    }),
+    el('div', { className: 'ls-quest__id', text: `#${problem.problemId} · ${problem.slug}` }),
+    el('div', {
+      className: 'ls-quest__meta',
+      children: [
+        dueState === null ? null : badge(DUE_LABEL[dueState], DUE_TONE[dueState]),
+        problem.nextReviewAt === null
+          ? null
+          : el('span', { text: `next ${formatDate(problem.nextReviewAt)}` }),
+        problem.officialTags.length > 0
+          ? el('span', { text: problem.officialTags.slice(0, 3).join(' · ') })
+          : null,
+        problem.languages.length > 0 ? el('span', { text: problem.languages.join(' / ') }) : null,
+        problem.metadataIncomplete ? el('span', { text: 'incomplete metadata' }) : null,
+      ],
+    }),
+  );
+
+  if (actions.length > 0) {
+    card.append(el('div', { className: 'ls-quest__actions', children: actions }));
+  }
+
+  return card;
+}
+
+function emptyQuestBoard(): HTMLElement {
+  return el('div', {
+    className: 'ls-empty-art',
+    children: [
+      el('img', { attrs: { src: 'art/logo-emblem.svg', alt: '' } }),
+      el('h3', { text: 'No quests recorded' }),
+      el('p', {
+        text: 'Solve a problem on LeetCode and get it Accepted. LeetSensei files it under every official topic and adds it here for revision.',
+      }),
+      el('div', {
+        className: 'ls-actions',
+        children: [
+          button(
+            'Browse LeetCode',
+            () => window.open('https://leetcode.com/problemset/', '_blank', 'noopener'),
+            { small: true, variant: 'primary' },
+          ),
         ],
       }),
     ],
+  });
+}
+
+function noResults(): HTMLElement {
+  const active = [
+    filters.query.trim() === '' ? '' : `“${filters.query.trim()}”`,
+    filters.tag,
+    filters.language,
+    filters.due === 'all' ? '' : filters.due,
+  ].filter((entry) => entry !== '');
+
+  return el('div', {
+    className: 'ls-empty-art',
+    children: [
+      el('h3', { text: 'No quests match' }),
+      el('p', {
+        text:
+          active.length === 0
+            ? 'No quests match the current filters.'
+            : `Filters: ${active.join(' · ')}. Widen them to see more.`,
+      }),
+      el('div', {
+        className: 'ls-actions',
+        children: [
+          button(
+            'Clear filters',
+            () => {
+              filters.query = '';
+              filters.tag = '';
+              filters.language = '';
+              filters.due = 'all';
+              void refresh();
+            },
+            { small: true },
+          ),
+        ],
+      }),
+    ],
+  });
+}
+
+function questBoard(overview: Overview): HTMLElement {
+  if (overview.problems.length === 0) return emptyQuestBoard();
+  const problems = filteredProblems(overview);
+  if (problems.length === 0) return noResults();
+  return el('div', {
+    className: 'ls-quests',
+    children: problems.map((problem) => questCard(problem)),
   });
 }
 
@@ -272,19 +635,26 @@ function filtersBar(overview: Overview): HTMLElement {
   });
 }
 
+// ----------------------------------------------------------------- objectives
+
 function reviewRow(row: RevisionRow): HTMLElement {
   const actions = el('div', { className: 'ls-review-actions' });
   for (const [rating, label, btnClass] of [
-    ['again', '再 Again', 'ls-btn-again'],
-    ['hard', '難 Hard', 'ls-btn-hard'],
-    ['easy', '易 Easy', 'ls-btn-easy'],
+    ['again', 'Again', 'ls-btn-again'],
+    ['hard', 'Hard', 'ls-btn-hard'],
+    ['easy', 'Easy', 'ls-btn-easy'],
   ] as const) {
     const btn = button(
       label,
-      () =>
-        void run(() =>
-          send({ type: 'revision/review', payload: { problemId: row.problemId, rating } }),
-        ),
+      () => {
+        const quiet = reducedMotion();
+        btn.closest('li')?.classList.add('is-completing');
+        setFlash(`${row.title} rated ${rating} · +${XP_BY_RATING[rating]} XP`);
+        void run(async () => {
+          await send({ type: 'revision/review', payload: { problemId: row.problemId, rating } });
+          if (!quiet) await delay(240);
+        });
+      },
       { small: true },
     );
     btn.classList.add(btnClass);
@@ -296,7 +666,7 @@ function reviewRow(row: RevisionRow): HTMLElement {
   });
   dateInput.value = toDateInputValue(row.nextReviewAt);
   const setDate = button(
-    'Set',
+    'Set date',
     () =>
       void run(async () => {
         if (dateInput.value === '') return;
@@ -305,6 +675,7 @@ function reviewRow(row: RevisionRow): HTMLElement {
           type: 'revision/set-next',
           payload: { problemId: row.problemId, nextReviewAt: iso },
         });
+        setFlash(`${row.title} scheduled for ${dateInput.value}`);
       }),
     { small: true },
   );
@@ -312,30 +683,31 @@ function reviewRow(row: RevisionRow): HTMLElement {
   const controls: (Node | null)[] = [dateInput, setDate];
   if (row.url !== '') {
     controls.push(
-      button('Open problem', () => window.open(row.url, '_blank', 'noopener'), { small: true }),
+      button('Open', () => window.open(row.url, '_blank', 'noopener'), { small: true }),
     );
   }
 
   return el('li', {
     children: [
       el('div', {
-        className: 'ls-row ls-row--wrap',
+        className: 'ls-objective',
         children: [
           el('div', {
+            className: 'ls-objective__body',
             children: [
-              el('strong', { text: row.title }),
-              el('div', {
+              el('span', { className: 'ls-objective__title', text: row.title }),
+              el('span', {
                 className: 'ls-small ls-muted',
                 text: `#${row.problemId} · ${row.currentIntervalDays}d interval · ${row.reviewCount} review(s)${row.lastRating ? ` · last: ${row.lastRating}` : ''}`,
+              }),
+              el('span', {
+                className: 'ls-small ls-muted',
+                text: `Next ${formatDate(row.nextReviewAt)}${row.lastReviewedAt ? ` · last reviewed ${formatDate(row.lastReviewedAt)}` : ''}`,
               }),
             ],
           }),
           badge(DUE_LABEL[row.dueState], DUE_TONE[row.dueState]),
         ],
-      }),
-      el('div', {
-        className: 'ls-small ls-muted',
-        text: `Next review ${formatDate(row.nextReviewAt)}${row.lastReviewedAt ? ` · last reviewed ${formatDate(row.lastReviewedAt)}` : ''}`,
       }),
       actions,
       el('div', { className: 'ls-actions', children: controls }),
@@ -345,9 +717,15 @@ function reviewRow(row: RevisionRow): HTMLElement {
 
 function reviewQueue(overview: Overview): HTMLElement {
   if (overview.revisions.length === 0) {
-    return emptyState(
-      'Nothing to revise yet. Solved problems are scheduled for review one day after they sync.',
-    );
+    return el('div', {
+      className: 'ls-empty-art',
+      children: [
+        el('h3', { text: 'No training scheduled' }),
+        el('p', {
+          text: 'Solved problems are scheduled for review one day after they sync. Nothing is due yet.',
+        }),
+      ],
+    });
   }
 
   const groups: { key: DueState; title: string; rows: RevisionRow[] }[] = [
@@ -366,7 +744,7 @@ function reviewQueue(overview: Overview): HTMLElement {
       el('div', {
         className: 'ls-stack',
         children: [
-          el('h3', { text: `${group.title} (${group.rows.length})` }),
+          el('h3', { text: `${group.title} · ${group.rows.length}` }),
           group.rows.length === 0
             ? el('div', { className: 'ls-small ls-muted', text: 'Nothing here.' })
             : el('ul', {
@@ -396,11 +774,19 @@ function reviewQueue(overview: Overview): HTMLElement {
   return el('div', { className: 'ls-stack', children });
 }
 
+// ------------------------------------------------------------------ disputes
+
 function conflictsPanel(pending: PendingJob | null): HTMLElement {
   if (pending === null || pending.conflicts.length === 0) {
-    return emptyState(
-      'No conflicts. LeetSensei never overwrites a file you edited without asking.',
-    );
+    return el('div', {
+      className: 'ls-empty-art',
+      children: [
+        el('h3', { text: 'No disputes' }),
+        el('p', {
+          text: 'LeetSensei never overwrites a file you edited. If a destination file changes, the choice appears here.',
+        }),
+      ],
+    });
   }
 
   const list = el('ul', { className: 'ls-list' });
@@ -427,6 +813,14 @@ function conflictsPanel(pending: PendingJob | null): HTMLElement {
                 type: 'sync/conflict-decision',
                 payload: { path: conflict.path, decision },
               });
+              setFlash(
+                decision === 'replace'
+                  ? `Replaced ${conflict.path}`
+                  : decision === 'save-version'
+                    ? `Saved ${conflict.path} as a dated version`
+                    : `Skipped ${conflict.path}`,
+                decision === 'cancel' ? 'warn' : 'ok',
+              );
             }),
           { small: true, ...(variant ? { variant } : {}) },
         ),
@@ -462,7 +856,9 @@ function conflictsPanel(pending: PendingJob | null): HTMLElement {
   });
 }
 
-function historyPanel(revisions: RevisionStore, overview: Overview): HTMLElement {
+// ------------------------------------------------------------------- journal
+
+function journalPanel(revisions: RevisionStore, overview: Overview): HTMLElement {
   const titles = new Map(overview.problems.map((problem) => [problem.problemId, problem.title]));
   const events: {
     problemId: string;
@@ -483,101 +879,144 @@ function historyPanel(revisions: RevisionStore, overview: Overview): HTMLElement
     }
   }
   if (events.length === 0) {
-    return emptyState(
-      'No reviews recorded yet. Rate a problem in the review queue to start the history.',
-    );
+    return el('div', {
+      className: 'ls-empty-art',
+      children: [
+        el('h3', { text: 'The journal is empty' }),
+        el('p', {
+          text: 'Every review you record is written here with the interval it moved to. Rate a problem to start it.',
+        }),
+      ],
+    });
   }
   events.sort((left, right) => (left.at > right.at ? -1 : 1));
 
-  const body = el('tbody');
-  for (const event of events.slice(0, 200)) {
-    body.append(
-      el('tr', {
-        children: [
-          el('td', { className: 'ls-small', text: formatDateTime(event.at) }),
-          el('td', { text: titles.get(event.problemId) ?? event.problemId }),
-          el('td', {
-            children: [
-              badge(
-                event.rating,
-                event.rating === 'easy' ? 'ok' : event.rating === 'again' ? 'err' : 'warn',
-              ),
-            ],
-          }),
-          el('td', {
-            className: 'ls-small',
-            text: `${event.before}d -> ${event.after}d`,
-          }),
-        ],
-      }),
-    );
-  }
-
   return el('div', {
-    className: 'ls-table-wrap',
-    children: [
-      el('table', {
-        className: 'ls-table',
+    className: 'ls-journal',
+    children: events.slice(0, 200).map((event) =>
+      el('div', {
+        className: 'ls-journal__row',
         children: [
-          el('thead', {
-            children: [
-              el('tr', {
-                children: [
-                  el('th', { attrs: { scope: 'col' }, text: 'When' }),
-                  el('th', { attrs: { scope: 'col' }, text: 'Problem' }),
-                  el('th', { attrs: { scope: 'col' }, text: 'Rating' }),
-                  el('th', { attrs: { scope: 'col' }, text: 'Interval' }),
-                ],
-              }),
-            ],
+          el('span', { className: 'ls-journal__when', text: formatDateTime(event.at) }),
+          el('span', {
+            className: 'ls-journal__title',
+            text: titles.get(event.problemId) ?? event.problemId,
           }),
-          body,
+          badge(
+            event.rating,
+            event.rating === 'easy' ? 'ok' : event.rating === 'again' ? 'err' : 'warn',
+          ),
+          el('span', {
+            className: 'ls-journal__delta',
+            text: `${event.before}d → ${event.after}d`,
+          }),
         ],
       }),
-    ],
+    ),
   });
 }
 
-function renderHeader(overview: Overview): void {
-  clear(header);
-  header.append(
-    el('div', {
-      className: 'ls-header',
-      children: [
-        el('div', {
-          className: 'ls-brand',
-          children: [
-            el('img', { attrs: { src: 'icons/icon-48.png', alt: 'LeetSensei' } }),
-            el('div', {
-              className: 'ls-brand-info',
-              children: [
-                el('div', {
-                  className: 'ls-brand-title',
-                  children: [
-                    el('span', { text: 'LeetSensei' }),
-                    el('span', { className: 'ls-tag-badge', text: '先生' }),
-                  ],
-                }),
-                el('div', {
-                  className: 'ls-brand-sub',
-                  text: `アルゴリズム道場 · Algorithm Dojo v${overview.version}`,
-                }),
-              ],
-            }),
-          ],
-        }),
-        el('div', {
-          className: 'ls-actions',
-          children: [
-            button('Options', () => openPage('options'), { small: true }),
-            button('Retry last sync', () => void run(() => send({ type: 'sync/retry' })), {
-              small: true,
-            }),
-          ],
-        }),
-      ],
-    }),
-  );
+// -------------------------------------------------------------------- motion
+
+function wireHeroMotion(section: HTMLElement): void {
+  if (reducedMotion() || !finePointer()) return;
+
+  let frame = 0;
+  let nextX = 0;
+  let nextY = 0;
+
+  const apply = (): void => {
+    frame = 0;
+    section.style.setProperty('--px', nextX.toFixed(3));
+    section.style.setProperty('--py', nextY.toFixed(3));
+  };
+
+  const schedule = (): void => {
+    if (frame === 0) frame = window.requestAnimationFrame(apply);
+  };
+
+  section.addEventListener('pointermove', (event) => {
+    const rect = section.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    nextX = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
+    nextY = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
+    schedule();
+  });
+
+  section.addEventListener('pointerleave', () => {
+    nextX = 0;
+    nextY = 0;
+    schedule();
+  });
+}
+
+function wireTilt(cards: readonly HTMLElement[]): void {
+  if (reducedMotion() || !finePointer()) return;
+
+  for (const card of cards) {
+    let frame = 0;
+    let tiltX = 0;
+    let tiltY = 0;
+
+    const apply = (): void => {
+      frame = 0;
+      card.style.setProperty('--tilt-x', tiltX.toFixed(2));
+      card.style.setProperty('--tilt-y', tiltY.toFixed(2));
+    };
+
+    const schedule = (): void => {
+      if (frame === 0) frame = window.requestAnimationFrame(apply);
+    };
+
+    card.addEventListener('pointermove', (event) => {
+      const rect = card.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      tiltX = -((event.clientY - rect.top) / rect.height - 0.5) * 5;
+      tiltY = ((event.clientX - rect.left) / rect.width - 0.5) * 5;
+      schedule();
+    });
+
+    card.addEventListener('pointerleave', () => {
+      tiltX = 0;
+      tiltY = 0;
+      schedule();
+    });
+  }
+}
+
+// ---------------------------------------------------------------- composition
+
+function selectTab(id: TabId): void {
+  activeTab = id;
+  void refresh();
+}
+
+function tabButton(id: TabId, count?: number): HTMLButtonElement {
+  const meta = TAB_META[id];
+  const countText = count === undefined ? '' : ` (${count})`;
+  const node = el('button', {
+    className: 'ls-tab',
+    attrs: {
+      type: 'button',
+      role: 'tab',
+      'aria-selected': String(activeTab === id),
+      'aria-controls': 'ls-panel',
+      id: `ls-tab-${id}`,
+    },
+    children: [
+      el('span', {
+        className: 'ls-tab-kanji',
+        text: meta.kanji,
+        attrs: { 'aria-hidden': 'true' },
+      }),
+      el('span', { text: `${meta.label}${countText}` }),
+    ],
+  });
+  node.addEventListener('click', () => {
+    activeTab = id;
+    void refresh();
+  });
+  return node;
 }
 
 function render(overview: Overview, pending: PendingJob | null, revisions: RevisionStore): void {
@@ -586,90 +1025,78 @@ function render(overview: Overview, pending: PendingJob | null, revisions: Revis
   clear(app);
   app.setAttribute('aria-busy', 'false');
 
-  app.append(
-    el('section', {
-      className: 'ls-card ls-status-hero ls-stack',
-      children: [
-        el('div', {
-          className: 'ls-row ls-row--wrap',
-          children: [
-            el('div', {
-              className: 'ls-row',
-              children: [
-                el('span', {
-                  className: `ls-dot ${overview.connected ? 'ls-dot--ok' : 'ls-dot--warn'}`,
-                }),
-                el('strong', {
-                  text: overview.connected
-                    ? `${overview.login ?? 'GitHub'} · ${overview.repo ? `${overview.repo.owner}/${overview.repo.repo}@${overview.repo.branch}` : 'no repository selected'}`
-                    : '未接続 · Not connected to GitHub',
-                }),
-              ],
-            }),
-            badge(overview.status.phase, phaseTone(overview.status.phase)),
-          ],
-        }),
-        el('p', { className: 'ls-small', text: overview.status.message }),
-        el('div', {
-          className: 'ls-row ls-row--wrap',
-          children: [
-            badge(
-              `遅延 ${overview.schedule.overdue} overdue`,
-              overview.schedule.overdue > 0 ? 'err' : 'neutral',
-            ),
-            badge(
-              `本日 ${overview.schedule.dueToday} due today`,
-              overview.schedule.dueToday > 0 ? 'warn' : 'neutral',
-            ),
-            badge(`次回 ${overview.schedule.upcoming} upcoming`),
-            badge(`修練 ${overview.problems.length} problems`),
-            overview.queuedSubmissions > 0
-              ? badge(`待機 ${overview.queuedSubmissions} waiting to sync`, 'info')
-              : null,
-            el('span', {
-              className: 'ls-small ls-muted',
-              text: `最終同期: ${formatDateTime(overview.lastSyncedAt)}`,
-            }),
-          ],
-        }),
-        overview.orphans.length > 0
-          ? note(
-              `${overview.orphans.length} problem(s) exist in only one of the manifest or the revision store. This is normal after a partial restore; the repository backup can reconcile them.`,
-              'warn',
-            )
-          : null,
-      ],
-    }),
-  );
+  const heroSection = hero(overview);
+  const status = statusPanel(overview);
 
   const tabs = el('div', {
-    className: 'ls-tabs',
-    attrs: { role: 'tablist' },
+    className: 'ls-tabs ls-reveal',
+    attrs: { role: 'tablist', 'aria-label': 'Dashboard sections' },
     children: [
-      tabButton('problems', 'Problems', overview.problems.length),
-      tabButton('reviews', 'Review queue', overview.schedule.overdue + overview.schedule.dueToday),
-      tabButton('conflicts', 'Conflicts', pending?.conflicts.length ?? 0),
-      tabButton('history', 'History'),
+      tabButton('problems', overview.problems.length),
+      tabButton('reviews', overview.schedule.overdue + overview.schedule.dueToday),
+      tabButton('conflicts', pending?.conflicts.length ?? 0),
+      tabButton('history'),
     ],
   });
-  app.append(tabs);
 
-  const panel = el('section', { className: 'ls-card ls-stack', attrs: { role: 'tabpanel' } });
+  const tabChanged = lastRenderedTab !== null && lastRenderedTab !== activeTab;
+  const panel = el('section', {
+    className: `ls-card ls-stack ls-reveal${tabChanged ? ' ls-panel-enter' : ''}`,
+    attrs: {
+      role: 'tabpanel',
+      id: 'ls-panel',
+      'aria-labelledby': `ls-tab-${activeTab}`,
+    },
+  });
+
+  const flashNote = flash;
+  flash = null;
+  if (flashNote !== null) {
+    panel.append(
+      el('div', { className: 'ls-flash', children: [note(flashNote.text, flashNote.tone)] }),
+    );
+  }
+
   if (activeTab === 'problems') {
-    panel.append(filtersBar(overview), problemTable(filteredProblems(overview)));
+    panel.append(filtersBar(overview), questBoard(overview));
   } else if (activeTab === 'reviews') {
     panel.append(reviewQueue(overview));
   } else if (activeTab === 'conflicts') {
     panel.append(conflictsPanel(pending));
   } else {
-    panel.append(historyPanel(revisions, overview));
+    panel.append(journalPanel(revisions, overview));
   }
-  app.append(panel);
+  lastRenderedTab = activeTab;
+
+  const orphanNote =
+    overview.orphans.length > 0
+      ? note(
+          `${overview.orphans.length} problem(s) exist in only one of the manifest or the revision store. This is normal after a partial restore; the repository backup can reconcile them.`,
+          'warn',
+        )
+      : null;
+
+  app.append(heroSection, status);
+  if (orphanNote !== null) app.append(orphanNote);
+  app.append(tabs, panel);
+
+  wireHeroMotion(heroSection);
+  wireTilt([...panel.querySelectorAll<HTMLElement>('.ls-quest')]);
+
+  // One entrance per session: switching tabs must not replay the reveal.
+  if (hasRevealed) {
+    app.dataset.entered = 'true';
+  } else {
+    hasRevealed = true;
+    window.requestAnimationFrame(() => {
+      app.dataset.entered = 'true';
+    });
+  }
 }
 
 async function refresh(): Promise<void> {
   app.setAttribute('aria-busy', 'true');
-  if (app.childElementCount === 0) app.append(loading('Loading local state...'));
+  if (app.childElementCount === 0) app.append(loadingState());
   try {
     const response = await send<OverviewResponse>({ type: 'data/overview' });
     render(response.overview, response.pending, response.revisions);

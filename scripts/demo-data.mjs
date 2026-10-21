@@ -143,12 +143,15 @@ const revisions = {
       { at: iso(-10, 20), rating: 'easy', intervalBeforeDays: 1, intervalAfterDays: 3 },
       { at: iso(-6, 20), rating: 'hard', intervalBeforeDays: 3, intervalAfterDays: 7 },
       { at: iso(-4, 20), rating: 'again', intervalBeforeDays: 7, intervalAfterDays: 1 },
+      { at: iso(-2, 20), rating: 'hard', intervalBeforeDays: 1, intervalAfterDays: 3 },
     ]),
     '0001': review('0001', 0, 3, [
       { at: iso(-4, 21), rating: 'hard', intervalBeforeDays: 1, intervalAfterDays: 3 },
+      { at: iso(-1, 21), rating: 'easy', intervalBeforeDays: 3, intervalAfterDays: 7 },
     ]),
     '0042': review('0042', 5, 14, [
       { at: iso(-9, 21), rating: 'easy', intervalBeforeDays: 7, intervalAfterDays: 14 },
+      { at: iso(0, 8), rating: 'hard', intervalBeforeDays: 14, intervalAfterDays: 30 },
     ]),
     '0206': review('0206', 12, 30, [
       { at: iso(-18, 21), rating: 'easy', intervalBeforeDays: 14, intervalAfterDays: 30 },
@@ -166,7 +169,7 @@ const settings = normalizeSettings({
   fallbackCategory: 'Uncategorized',
   revisionIntervals: [1, 3, 7, 14, 30],
   authScope: 'public_repo',
-  theme: 'auto',
+  theme: 'dark',
 });
 
 const auth = {

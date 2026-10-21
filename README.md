@@ -163,7 +163,7 @@ npm run verify        # format check + lint + typecheck + tests + build
 npm run format        # prettier --write
 npm run lint          # eslint
 npm run typecheck     # tsc --noEmit
-npm test              # vitest run (440 tests)
+npm test              # vitest run (457 tests)
 npm run build         # bundle for Chrome and Firefox
 npm run package       # build and produce dist/<browser>.zip
 npm run icons         # regenerate icons/*.png
@@ -210,7 +210,7 @@ No framework earns its dependency budget here; the DOM helpers in `src/ui` are ~
 npm test
 ```
 
-- **440 tests** across 29 files: unit tests for all core logic, plus integration tests for
+- **457 tests** across 30 files: unit tests for all core logic, plus integration tests for
   the GitHub layers driven by an in-memory GitHub that reproduces content-addressed blobs,
   fast-forward-only ref updates and concurrent pushes.
 - Covered explicitly: Accepted vs non-Accepted, malformed metadata, hashing determinism,

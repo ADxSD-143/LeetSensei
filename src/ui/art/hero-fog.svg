@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <filter id="soften" x="-25%" y="-80%" width="150%" height="260%">
+      <feGaussianBlur stdDeviation="30"/>
+    </filter>
+  </defs>
+  <g filter="url(#soften)">
+    <ellipse cx="360" cy="344" rx="520" ry="64" fill="#8b93a3" opacity="0.16"/>
+    <ellipse cx="980" cy="384" rx="600" ry="74" fill="#8b93a3" opacity="0.13"/>
+    <ellipse cx="700" cy="300" rx="380" ry="44" fill="#e9e2d2" opacity="0.05"/>
+    <ellipse cx="1240" cy="330" rx="320" ry="52" fill="#e63946" opacity="0.05"/>
+  </g>
+</svg>

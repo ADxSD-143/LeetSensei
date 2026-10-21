@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="LeetSensei">
+  <!-- Single-colour mark: seal ground, moon cut out, blade stroke. -->
+  <rect x="4" y="4" width="56" height="56" rx="13" fill="#111214"/>
+  <path d="M40.5 12.5a20 20 0 1 0 0 39 21.5 21.5 0 0 1 0-39Z" fill="#ffffff"/>
+  <path d="M19.5 44.5 46.5 17.5" stroke="#111214" stroke-width="4" stroke-linecap="round"/>
+</svg>

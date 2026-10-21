@@ -5,14 +5,14 @@
 | File                  | Size     | Shows                                                                                                                                  |
 | --------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `01-connect.png`      | 1280×800 | Step 1 of the guided setup: the three-step indicator and the single "Connect GitHub" action, with no token field and no scope question |
-| `02-dashboard.png`    | 1280×800 | The dashboard with five solved problems, showing topics, languages, categories and next-review state                                   |
-| `03-review-queue.png` | 1280×800 | The review queue grouped into Overdue / Due today / Upcoming, with the Easy / Hard / Again controls                                    |
+| `02-dashboard.png`    | 1280×800 | The quest board: the cinematic hero, the rank/XP/streak panel, and five solved problems as cards with difficulty seals and topic tags  |
+| `03-review-queue.png` | 1280×800 | Objectives, grouped into Overdue / Due today / Upcoming, with the Again / Hard / Easy controls and a manual date field                 |
 
-Captured from the built extension loaded unpacked in Chromium, at exactly 1280×800 with the
-viewport set explicitly. **The populated screens use example data**: a fictional
-`example-student` account, a fictional `example-student/leetcode-solutions` repository, and five
-real LeetCode problems with synthetic review history. The store listing says so. No real
-account, repository or token appears in any image.
+Captured at exactly 1280×800 from the **built bundle** with the demo state seeded, in the dark
+theme. **The populated screens use example data**: a fictional `example-student` account, a
+fictional `example-student/leetcode-solutions` repository, and five real LeetCode problems with
+synthetic review history. The store listing says so. No real account, repository or token
+appears in any image.
 
 ## Regenerating them
 
@@ -39,6 +39,12 @@ npm run demo-data > demo-state.json
 
 Capture `01-connect.png` against a **cleared** profile (no account, no repository) so it shows
 step 1 rather than the ready state. Capture the other two after seeding.
+
+The current set was produced from the built bundle with `data/overview` answered by the real
+`buildOverview()` over that seeded demo state, rendered by headless Chromium at 1280×800 with
+scrollbars hidden. That path needs no extension installation and no GitHub account, and it
+renders the same DOM, CSS and artwork that ships. The extension-context procedure above remains
+the authoritative check before a release.
 
 ## Legacy development captures
 

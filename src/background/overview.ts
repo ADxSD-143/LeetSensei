@@ -6,6 +6,7 @@ import {
   type ScheduleSummary,
 } from '../core/schedule';
 import type { RevisionStore } from '../core/revisions';
+import { computeProgress, type ProgressSummary } from '../core/progress';
 import type { SyncStatusReport } from '../shared/messages';
 import type { AuthState, PendingJob, SyncState } from '../storage/repository';
 import type { Settings } from '../storage/settings';
@@ -68,6 +69,8 @@ export interface Overview {
   version: string;
   /** The single next step in first-time setup. */
   setup: SetupState;
+  /** XP, rank and streak, always derived from recorded review history. */
+  progress: ProgressSummary;
 }
 
 function lastRatingOf(store: RevisionStore, problemId: string): string | null {
@@ -182,5 +185,6 @@ export function buildOverview(input: {
     queuedSubmissions: syncState.queued?.length ?? 0,
     version: input.version,
     setup: deriveSetupState(connected, settings),
+    progress: computeProgress(revisions, now),
   };
 }

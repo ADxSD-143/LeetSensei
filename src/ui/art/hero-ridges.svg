@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <linearGradient id="farFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#232a36" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#1a202a" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="midFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#161b25"/>
+      <stop offset="1" stop-color="#0f131a"/>
+    </linearGradient>
+    <linearGradient id="nearFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b0d12"/>
+      <stop offset="1" stop-color="#06070a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Distant ridge: low contrast, sits behind the moon's halo. -->
+  <path fill="url(#farFade)"
+        d="M0 268 96 226 168 246 246 198 322 232 402 186 486 226 566 194 646 236 726 202 812 240 892 206 972 244 1054 200 1136 238 1216 208 1300 240 1380 212 1440 236V420H0Z"/>
+
+  <!-- Middle ridge. -->
+  <path fill="url(#midFade)"
+        d="M0 322 82 292 158 312 244 268 330 306 424 262 512 304 606 272 700 312 796 278 892 316 988 282 1084 320 1180 286 1272 318 1364 288 1440 312V420H0Z"/>
+
+  <!-- Near ridge with a faint rim light along the crest. -->
+  <path fill="url(#nearFade)"
+        d="M0 372 78 350 150 366 246 330 336 362 438 332 528 366 636 340 744 372 852 344 960 374 1068 348 1176 376 1284 352 1392 372 1440 364V420H0Z"/>
+  <path fill="none" stroke="#e9e2d2" stroke-opacity="0.10" stroke-width="1.5"
+        d="M0 372 78 350 150 366 246 330 336 362 438 332 528 366 636 340 744 372 852 344 960 374 1068 348 1176 376 1284 352 1392 372 1440 364"/>
+</svg>

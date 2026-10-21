@@ -5,8 +5,36 @@ All notable changes to this project are documented here. This project follows
 
 ## [Unreleased]
 
-Post-1.0.0 work: store screenshots at 1280×800, the end-to-end browser run, and the Firefox
-submission. See [ROADMAP.md](ROADMAP.md).
+Post-1.0.0 work: the end-to-end browser run and the Firefox submission. See
+[ROADMAP.md](ROADMAP.md).
+
+### Changed
+
+- **The dashboard is now a "Shadow Ronin" dashboard.** A cinematic hero banner, a status panel,
+  and a quest board replace the previous table-first layout. The review queue, conflicts and
+  history become Objectives, Disputes and a Journal. Search, filters, all three conflict
+  decisions and manual review dates are unchanged.
+- **Rank, XP and streak are derived, never stored.** A new pure module (`src/core/progress.ts`)
+  projects XP (Again 1, Hard 3, Easy 5), named ranks from Ronin to Sensei, and a streak of
+  consecutive review days from the review history LeetSensei already keeps. Nothing new is
+  persisted, so a repository restore cannot desync it, and the panel says where the number
+  comes from.
+- **Dark is the default theme.** Existing stored preferences are respected; light remains a
+  full rice-paper equivalent, and both palettes now meet WCAG AA for body text (measured).
+- **New brand mark.** An original crescent-and-katana seal, as SVG, ships with the extension and
+  is reused for the app icons, so the mark and the icon cannot drift apart.
+- **Motion is CSS-only and opt-out.** Pointer parallax, card tilt, a fog drift and a one-time
+  entrance are all disabled under `prefers-reduced-motion` and on coarse pointers.
+- **The default theme test was updated** to expect `dark`; 17 tests were added for progression.
+
+### Fixed
+
+- Primary buttons and the brand seal now use a deeper red for filled controls, so white label
+  text reaches 5.4:1 (dark) and 8.0:1 (light) instead of 4.17:1.
+- The hero block sets an opaque background colour as well as a gradient, so its contrast no
+  longer depends on the gradient being painted.
+- Decorative kanji (tab and brand marks) are marked `aria-hidden` instead of being announced.
+- `verify:dist` now fails when a stylesheet references a missing asset.
 
 ## [1.0.0] — 2026-10-21
 

@@ -132,6 +132,19 @@ for (const browser of BROWSERS) {
     }
   }
 
+  // CSS must not reference missing local assets (the artwork lives in art/).
+  for (const name of await readdir(outdir)) {
+    if (!name.endsWith('.css')) continue;
+    const css = await readFile(join(outdir, name), 'utf8');
+    for (const match of css.matchAll(/url\((['"]?)([^'")]+)\1\)/g)) {
+      const ref = match[2];
+      if (!ref || /^(data:|https?:|#)/.test(ref)) continue;
+      if (!existsSync(join(outdir, ref.replace(/^\//, '')))) {
+        fail(`[${browser}] ${name} references missing asset: ${ref}`);
+      }
+    }
+  }
+
   // Shipped code must be safe and must be classic scripts.
   const entries = await readdir(outdir, { withFileTypes: true });
   let scriptCount = 0;

@@ -1149,7 +1149,7 @@ function renderHeader(overview: Overview): void {
         el('div', {
           className: 'ls-brand',
           children: [
-            el('img', { attrs: { src: 'icons/icon-48.png', alt: 'LeetSensei' } }),
+            el('img', { attrs: { src: 'icons/icon-48.png', alt: '' } }),
             el('div', {
               className: 'ls-brand-info',
               children: [
@@ -1157,12 +1157,16 @@ function renderHeader(overview: Overview): void {
                   className: 'ls-brand-title',
                   children: [
                     el('span', { text: 'LeetSensei' }),
-                    el('span', { className: 'ls-tag-badge', text: '設定' }),
+                    el('span', {
+                      className: 'ls-tag-badge',
+                      text: '設定',
+                      attrs: { 'aria-hidden': 'true' },
+                    }),
                   ],
                 }),
                 el('div', {
                   className: 'ls-brand-sub',
-                  text: `環境設定 · Settings v${overview.version}`,
+                  text: `Shadow Ronin · settings · v${overview.version}`,
                 }),
               ],
             }),
