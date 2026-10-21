@@ -5,8 +5,55 @@ All notable changes to this project are documented here. This project follows
 
 ## [Unreleased]
 
-Pre-release work only: browser smoke testing, screenshots and store packaging. See
-[ROADMAP.md](ROADMAP.md).
+Post-1.0.0 work: store screenshots at 1280×800, the end-to-end browser run, and the Firefox
+submission. See [ROADMAP.md](ROADMAP.md).
+
+## [1.0.0] — 2026-10-21
+
+First release prepared for the Chrome Web Store. The sync engine, accepted-only gate, repository
+layout, conflict protection and revision scheduling are unchanged; this release is about making
+installation and first-time setup simple and safe to distribute.
+
+### Changed
+
+- **Onboarding is three steps, with no GitHub jargon.** Connect GitHub → choose repository and
+  branch → Ready. The permission-scope dropdown is gone from the flow; LeetSensei asks for
+  `public_repo` first and only requests broader access if you ask for it.
+- **Sign-in completes by itself.** Polling starts as soon as the device code is issued, so
+  approving on GitHub is the only manual action. "Copy code & open GitHub" copies the code and
+  opens the verification page in one click.
+- **Setup is verified before it is called done.** The new `github/check-access` check confirms
+  the repository is reachable, that you can push to it, and that the branch exists. Only then
+  does the card turn green.
+- **Private repositories are an explicit upgrade.** Clicking "Allow private repositories"
+  re-authorizes with the `repo` scope; nothing wider is ever requested automatically.
+- **Advanced settings are collapsed** behind one disclosure, so a first-time user sees only the
+  setup steps.
+- **Store builds cannot use personal access tokens.** `npm run release` sets `ALLOW_PAT` to
+  false: the token UI is not rendered and the `pat-save` message is rejected. Development
+  builds still offer it.
+- **A release build refuses to start without an OAuth client id**, so a store package can no
+  longer ship an extension that cannot connect.
+- Version raised to 1.0.0.
+
+### Added
+
+- `npm run release` — full verification, a release build that requires the client id, and a
+  checked archive.
+- `github/check-access` message and `SyncCoordinator.checkAccess`, with integration tests for
+  write access, a missing branch, a private repository, and a disconnected account.
+- A `setup` state (`needs-github` / `needs-repository` / `ready`) on the overview, so the popup
+  and the options page always agree on the next action.
+- `PRIVACY.md` (also used as the store privacy-policy URL), `docs/STORE_LISTING.md` (listing
+  copy, permission justifications, privacy-practices answers), `docs/RELEASE.md` (runbook) and
+  `docs/screenshots/README.md`.
+
+### Fixed
+
+- Clicking **Load my repositories** could fail in Chromium-based browsers with
+  `Failed to execute 'fetch' on 'WorkerGlobalScope': Illegal invocation`. The GitHub client
+  invoked its stored `fetch` as a method, which the browser rejects; every call site now binds
+  the global receiver. Covered by regression tests that reproduce the platform brand check.
 
 ## [0.1.0] — 2026-10-21
 

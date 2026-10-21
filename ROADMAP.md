@@ -63,13 +63,17 @@ Legend: `[x]` done and verified · `[~]` implemented, not yet verified in a real
 
 ## Phase 6 — Cross-browser QA and release
 
-- [x] Unit and integration tests (427 tests, no network, no real repository)
+- [x] Unit and integration tests (440 tests, no network, no real repository)
 - [x] Offline, retry, duplicate event, conflict, partial write and unverified write cases
 - [x] Permissions and privacy review recorded in [docs/SECURITY.md](docs/SECURITY.md)
 - [x] Browser-specific installation and compatibility documentation
 - [x] Extension loaded unpacked in a real Chromium browser: Chrome reports **0 runtime errors, 0 manifest errors, 0 install warnings**, and the popup, dashboard and options pages all render and talk to the background worker
 - [x] Screenshots captured from that real browser session and added to the README
+- [x] Guided three-step onboarding (connect → choose repository → ready) with automatic sign-in polling
+- [x] Release plumbing: `npm run release` requires a client id, compiles the PAT path out, and verifies the package
+- [x] Privacy policy (`PRIVACY.md`), store listing copy and permission justifications ([docs/STORE_LISTING.md](docs/STORE_LISTING.md)), release runbook ([docs/RELEASE.md](docs/RELEASE.md))
 - [ ] **End-to-end sync in a browser** — needs a GitHub account and an Accepted submission; the next concrete task
+- [ ] Store screenshots at 1280×800 ([docs/screenshots/README.md](docs/screenshots/README.md))
 - [ ] Load and verify the Firefox bundle the same way
 - [ ] Automated browser end-to-end harness (Playwright with a loaded extension)
 - [ ] Publish packages: Chrome Web Store, Firefox Add-ons
@@ -110,4 +114,4 @@ Legend: `[x]` done and verified · `[~]` implemented, not yet verified in a real
 | 5   | Sync errors are visible and retryable                                    | ✅ Coded errors surfaced in the popup and dashboard       |
 | 6   | Revision state can be restored from the repository backup                | ✅ Restore flow tested against the in-memory GitHub       |
 | 7   | No telemetry or analytics is sent                                        | ✅ No third-party destination exists in the code          |
-| 8   | Tests cover normalization, conflict handling, retries and revision logic | ✅ 427 tests, 28 files                                    |
+| 8   | Tests cover normalization, conflict handling, retries and revision logic | ✅ 440 tests, 29 files                                    |

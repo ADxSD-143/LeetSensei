@@ -6,7 +6,7 @@ Built with zero runtime dependencies, no telemetry, and no required paid service
 
 > **Status: early MVP, working and tested, not yet published to any browser store.**
 > The sync engine, revision tracker, conflict handling and GitHub integration are
-> implemented and covered by 427 automated tests. See
+> implemented and covered by 440 automated tests. See
 > [Feature status](#feature-status) for exactly what is verified and what is not.
 
 ## What it does
@@ -39,26 +39,27 @@ happens twice: once against the page verdict and again against the submission re
 
 ## Feature status
 
-| Area                                     | Status                   | Notes                                                                                                          |
-| ---------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| Accepted-only gate                       | **Implemented, tested**  | Single validator; every non-Accepted status has a test                                                         |
-| Language coverage                        | **Implemented, tested**  | ~40 LeetCode languages; unknown languages are reported, never guessed                                          |
-| Topic-tag → folder mapping               | **Implemented, tested**  | `Hash Table` → `Hash-Table`, Unicode-safe, collision-safe, reserved-name-safe                                  |
-| Problem README                           | **Implemented, tested**  | Pre-filled template; your approach, complexity and notes survive every sync                                    |
-| Multi-language solutions                 | **Implemented, tested**  | One file per language, accumulated across submissions                                                          |
-| Manifest + hashing                       | **Implemented, tested**  | Versioned schema with migration, per-file sha256 and Git blob ids                                              |
-| Conflict protection                      | **Implemented, tested**  | Replace / Save version / Cancel; compare-by-blob-id before writing                                             |
-| Grouped commits                          | **Implemented, tested**  | One submission → one commit via the Git data API; never `force`                                                |
-| Idempotent retries                       | **Implemented, tested**  | Content-addressed blobs; a repeated event creates no duplicate files                                           |
-| Rate limits / offline / expiry           | **Implemented, tested**  | Bounded backoff, `retry-after`, retryable vs terminal error taxonomy                                           |
-| Revision scheduler                       | **Implemented, tested**  | Ladder 1/3/7/14/30 days; Easy advances, Hard holds, Again resets                                               |
-| Revision backup + restore                | **Implemented, tested**  | Backed up to `.leetcode-tracker/revisions.json`, restorable on a new device                                    |
-| Popup / dashboard / options              | **Verified in Chromium** | All three pages load, render and talk to the background worker with no console errors                          |
-| LeetCode GraphQL queries                 | **Live-verified**        | Confirmed against `leetcode.com/graphql`, from a plain client and from a real browser page                     |
-| LeetCode submit button + page structure  | **Live-verified**        | The real control is `data-e2e-locator="console-submit-button"`, and no verdict node exists before a submission |
-| LeetCode verdict node after a submission | **Not live-verified**    | It only exists after submitting, which needs an account. Mitigated by scanning every `data-e2e-locator` node   |
-| End-to-end sync in a browser             | **Not yet performed**    | Needs a GitHub account and an accepted submission; the procedure is in [docs/TESTING.md](docs/TESTING.md)      |
-| Browser-store publication                | **Not started**          | Needs maintainer accounts, signing and review                                                                  |
+| Area                                     | Status                   | Notes                                                                                                                                                    |
+| ---------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Accepted-only gate                       | **Implemented, tested**  | Single validator; every non-Accepted status has a test                                                                                                   |
+| Language coverage                        | **Implemented, tested**  | ~40 LeetCode languages; unknown languages are reported, never guessed                                                                                    |
+| Topic-tag → folder mapping               | **Implemented, tested**  | `Hash Table` → `Hash-Table`, Unicode-safe, collision-safe, reserved-name-safe                                                                            |
+| Problem README                           | **Implemented, tested**  | Pre-filled template; your approach, complexity and notes survive every sync                                                                              |
+| Multi-language solutions                 | **Implemented, tested**  | One file per language, accumulated across submissions                                                                                                    |
+| Manifest + hashing                       | **Implemented, tested**  | Versioned schema with migration, per-file sha256 and Git blob ids                                                                                        |
+| Conflict protection                      | **Implemented, tested**  | Replace / Save version / Cancel; compare-by-blob-id before writing                                                                                       |
+| Grouped commits                          | **Implemented, tested**  | One submission → one commit via the Git data API; never `force`                                                                                          |
+| Idempotent retries                       | **Implemented, tested**  | Content-addressed blobs; a repeated event creates no duplicate files                                                                                     |
+| Rate limits / offline / expiry           | **Implemented, tested**  | Bounded backoff, `retry-after`, retryable vs terminal error taxonomy                                                                                     |
+| Revision scheduler                       | **Implemented, tested**  | Ladder 1/3/7/14/30 days; Easy advances, Hard holds, Again resets                                                                                         |
+| Revision backup + restore                | **Implemented, tested**  | Backed up to `.leetcode-tracker/revisions.json`, restorable on a new device                                                                              |
+| First-run onboarding                     | **Verified in Chromium** | Three steps (connect → choose repository → ready), auto-polling sign-in, no scope question, no token field; a release build renders zero password inputs |
+| Popup / dashboard / options              | **Verified in Chromium** | All three pages load, render and talk to the background worker with no console errors                                                                    |
+| LeetCode GraphQL queries                 | **Live-verified**        | Confirmed against `leetcode.com/graphql`, from a plain client and from a real browser page                                                               |
+| LeetCode submit button + page structure  | **Live-verified**        | The real control is `data-e2e-locator="console-submit-button"`, and no verdict node exists before a submission                                           |
+| LeetCode verdict node after a submission | **Not live-verified**    | It only exists after submitting, which needs an account. Mitigated by scanning every `data-e2e-locator` node                                             |
+| End-to-end sync in a browser             | **Not yet performed**    | Needs a GitHub account and an accepted submission; the procedure is in [docs/TESTING.md](docs/TESTING.md)                                                |
+| Browser-store publication                | **Chrome: prepared**     | 1.0.0 build and listing copy ready; needs the maintainer's accounts, screenshots and review                                                              |
 
 ## Screenshots
 
@@ -84,7 +85,11 @@ connected GitHub account and a synced submission.
 
 ## Installation
 
-### Build from source
+> **Chrome Web Store:** 1.0.0 is being prepared for submission. This section will link to the
+> listing once it is approved. Until then, install from source below — it is the same build
+> reviewers will see.
+
+### From source (developers)
 
 ```bash
 git clone https://github.com/ADxSD-143/LeetSensei.git
@@ -95,49 +100,62 @@ npm run build          # or: npm run build:chrome / npm run build:firefox
 
 This produces `dist/chrome/` and `dist/firefox/`.
 
-### Chrome / Brave / Edge
+### Chrome / Brave / Edge (developer install)
 
 1. Open `chrome://extensions` (or `brave://extensions`).
 2. Enable **Developer mode**.
 3. Choose **Load unpacked** and select `dist/chrome`.
-4. Pin LeetSensei, then open **Options** and connect GitHub.
+4. Pin LeetSensei, then click **Connect GitHub** and follow the three-step setup.
 
-### Firefox
+### Firefox (developer install)
 
 1. Open `about:debugging#/runtime/this-firefox`.
 2. Choose **Load Temporary Add-on…** and select `dist/firefox/manifest.json`.
 3. Temporary add-ons are removed when Firefox restarts; a permanent install needs a
    signed package from addons.mozilla.org (see [docs/INSTALLATION.md](docs/INSTALLATION.md)).
 
-### Connecting GitHub
+## First-time setup
 
-LeetSensei uses the GitHub **OAuth device flow**, which needs only a public `client_id`
-and never a client secret. That client id belongs to whoever builds the extension, so
-there are two paths:
+Three steps, and no token to create:
 
-- **Personal access token (works out of the box).** In Options → GitHub account, expand
-  _Advanced: use a personal access token instead_. Create a **fine-grained** token with
-  `Contents: Read and write` scoped to your destination repository only, and paste it in.
-- **Device flow (recommended for a published build).** Register a GitHub OAuth App once,
-  then rebuild with its public client id:
+1. **Connect GitHub.** Click the button, approve the one-time code on the GitHub page that
+   opens. LeetSensei detects the approval by itself; there is no password to type and no
+   token to copy.
+2. **Choose where solutions go.** Your repositories load automatically — pick one, then pick
+   a branch (the default branch is preselected). LeetSensei verifies the repository is
+   writable and the branch exists before saying it is ready.
+3. **Ready.** Solve problems on LeetCode; Accepted solutions are saved automatically.
 
-  ```bash
-  # Windows (cmd)
-  set LEETSENSEI_GITHUB_CLIENT_ID=Iv1.xxxxxxxxxxxx
-  npm run build
+**Using a private repository?** LeetSensei asks for public-repository access by default. If
+your destination is private, click **Allow private repositories** and approve once more —
+nothing wider is requested unless you ask for it.
 
-  # PowerShell
-  $env:LEETSENSEI_GITHUB_CLIENT_ID = "Iv1.xxxxxxxxxxxx"
-  npm run build
+LeetSensei only ever appends commits; it never force-pushes and never deletes files.
 
-  # macOS / Linux
-  LEETSENSEI_GITHUB_CLIENT_ID=Iv1.xxxxxxxxxxxx npm run build
-  ```
+<details>
+<summary>Development note: building with your own OAuth client id</summary>
 
-  Enable **Device flow** on the OAuth App. The client id is public and is not a secret.
+A store build ships a public OAuth `client_id` baked in at build time (never a client secret).
+To produce that build you need your own registered GitHub OAuth App:
 
-Then pick your destination repository and branch in Options. LeetSensei only ever appends
-commits; it never force-pushes.
+```bash
+# Windows (cmd)
+set LEETSENSEI_GITHUB_CLIENT_ID=Iv1.xxxxxxxxxxxx
+npm run build
+
+# PowerShell
+$env:LEETSENSEI_GITHUB_CLIENT_ID = "Iv1.xxxxxxxxxxxx"
+npm run build
+
+# macOS / Linux
+LEETSENSEI_GITHUB_CLIENT_ID=Iv1.xxxxxxxxxxxx npm run build
+```
+
+Enable **Device flow** on the OAuth App. A release build (`npm run release`) refuses to run
+without a valid client id, and disables the personal-access-token fallback that development
+builds offer. See [docs/RELEASE.md](docs/RELEASE.md).
+
+</details>
 
 ## Development
 
@@ -146,7 +164,7 @@ npm run verify        # format check + lint + typecheck + tests + build
 npm run format        # prettier --write
 npm run lint          # eslint
 npm run typecheck     # tsc --noEmit
-npm test              # vitest run (427 tests)
+npm test              # vitest run (440 tests)
 npm run build         # bundle for Chrome and Firefox
 npm run package       # build and produce dist/<browser>.zip
 npm run icons         # regenerate icons/*.png
@@ -193,7 +211,7 @@ No framework earns its dependency budget here; the DOM helpers in `src/ui` are ~
 npm test
 ```
 
-- **427 tests** across 28 files: unit tests for all core logic, plus integration tests for
+- **440 tests** across 29 files: unit tests for all core logic, plus integration tests for
   the GitHub layers driven by an in-memory GitHub that reproduces content-addressed blobs,
   fast-forward-only ref updates and concurrent pushes.
 - Covered explicitly: Accepted vs non-Accepted, malformed metadata, hashing determinism,
@@ -222,7 +240,8 @@ unit-tested, mocked, locally verified and live-verified.
 - **Nothing is overwritten silently.** A file that changed since the last sync raises a
   conflict you must resolve.
 
-Full details and how to report a vulnerability: [docs/SECURITY.md](docs/SECURITY.md).
+Full details and how to report a vulnerability: [docs/SECURITY.md](docs/SECURITY.md). The
+user-facing policy is [PRIVACY.md](PRIVACY.md).
 
 ## Limitations
 

@@ -54,59 +54,67 @@ done for this version. For repeated development, use
 npx web-ext run --source-dir dist/firefox
 ```
 
-## 4. Authorize GitHub
+## 4. First-time setup (three steps)
 
-Open **Options** and pick one of the two paths.
+Open the extension and click the LeetSensei icon, then **Options**. Setup is a guided flow with
+no tokens to create, no scope names to understand, and no manual polling.
 
-### A. Personal access token (no rebuild required)
+### Step 1 — Connect GitHub
 
-1. Create a **fine-grained** token at <https://github.com/settings/personal-access-tokens/new>.
-2. Give it access to **only** the destination repository.
-3. Permission: **Contents → Read and write**. Nothing else is needed.
-4. Paste it into Options → GitHub account → _Advanced: use a personal access token instead_
-   → **Save token**.
+1. Click **Connect GitHub**. A one-time code appears and a GitHub tab opens.
+2. Click **Copy code & open GitHub** and approve the request on GitHub.
+3. Return to the options page. It detects the approval by itself and moves to step 2.
 
-Because the token is scoped to one repository, a leak cannot touch anything else in your
-account. Classic tokens with the `repo` scope also work but grant far more than LeetSensei
-needs.
+LeetSensei uses GitHub's **OAuth device flow**, so there is no password to type here and no
+client secret anywhere in the extension. The permission requested first is `public_repo`:
+read/write on **public** repositories.
 
-### B. Device flow (needs a client id at build time)
+### Step 2 — Choose where solutions go
 
-1. Register an OAuth App at <https://github.com/settings/developers>.
-2. Enable **Device flow** for it. No client secret is needed or used.
-3. Note the **Client ID** (it is public).
-4. Rebuild with it:
+1. Your repositories load automatically. Pick one from the list (only repositories you can
+   push to are shown).
+2. Pick a branch. The repository's default branch is preselected.
+3. Click **Finish setup**. LeetSensei verifies the repository is reachable, that you have
+   write access, and that the branch exists before it says it is ready.
 
-   ```bash
-   # Windows (cmd)
-   set LEETSENSEI_GITHUB_CLIENT_ID=Iv1.xxxxxxxxxxxx
-   npm run build
-   ```
+Use an existing repository. LeetSensei creates category folders and a `.leetcode-tracker/`
+state folder at its root, and only ever appends commits.
 
-   PowerShell / macOS / Linux equivalents are in the [README](../README.md#connecting-github).
+**Private destination repository?** The default permission cannot see private repositories.
+Click **Allow private repositories** and approve once more; LeetSensei re-authorizes with the
+`repo` scope and then lists them. Nothing wider is ever requested automatically.
 
-5. In Options, choose the scope (`public_repo`, or `repo` for a private destination) and
-   click **Start GitHub sign-in**. Enter the displayed code at
-   <https://github.com/login/device> and approve, then press **I approved it - continue**.
+**Repository not in the list?** Expand _Enter a repository manually_ and type the owner,
+repository and branch — the same verification runs.
 
-If no client id was baked in, LeetSensei says so clearly and points you at the token path
-instead of failing silently.
+### Step 3 — Ready
 
-## 5. Choose a destination
+The card turns green. From then on, solving a problem on LeetCode is all you do.
 
-In Options → **Destination repository**:
+> **Development builds only:** a locally built copy can alternatively use a fine-grained
+> personal access token (Options → Advanced settings → _Development: use a personal access
+> token instead_). Store builds do not offer this and reject the request, because normal
+> onboarding must not require a token. A release build (`npm run release`) refuses to run
+> without a client id and compiles the token path out entirely.
 
-1. Click **Load my repositories** and pick one (or type `owner` and `repo` and click **Save repository**).
-2. Click **Load branches** and pick a branch (or type one).
-
-Use an existing repository. LeetSensei creates category folders and a
-`.leetcode-tracker/` state folder at its root, and only ever appends commits.
-
-## 6. First sync
+## 5. First sync
 
 Solve any LeetCode problem and get it Accepted. Within a few seconds the popup reports the
 result. If LeetCode's page markup has changed, the popup reports an extraction failure with
 the reason instead of syncing nothing silently.
+
+## 6. Building a store package
+
+Building with your own OAuth client id is a maintainer task:
+
+```bash
+$env:LEETSENSEI_GITHUB_CLIENT_ID = "Iv1.xxxxxxxxxxxx"   # PowerShell
+npm run release
+```
+
+`npm run release` runs the full verification, refuses to build without a valid client id,
+disables the personal-access-token path, builds Chrome only, and writes `dist/chrome.zip`.
+The complete procedure is in [RELEASE.md](RELEASE.md).
 
 ## Updating
 

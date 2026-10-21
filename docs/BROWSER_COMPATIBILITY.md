@@ -70,16 +70,22 @@ Firefox MV3; the badge is refreshed hourly by an alarm and after every review.
 
 ## Store requirements
 
-Checked before any submission; **no store submission has been made**:
+Chrome Web Store is the first target; Firefox follows later. **No submission has been made
+yet.** The listing copy, permission justifications and privacy-practices answers are prepared in
+[STORE_LISTING.md](STORE_LISTING.md); the build/submit procedure is in [RELEASE.md](RELEASE.md).
 
-- Chrome Web Store: a single-purpose description, a privacy policy URL (use
-  [docs/SECURITY.md](SECURITY.md)), justification for each permission, and a review that
-  rejects remotely hosted code. LeetSensei ships no remote code and no `eval`, so it should
-  pass, but only a real review confirms it.
-- Firefox Add-ons: a minified build must be accompanied by the source it was built from. The
-  source is this repository, so submit it — or use `npm run build -- --no-minify` to produce a
-  readable build that reviewers can read directly.
-- Both: version must be `x.y` or `x.y.z`; the manifest already complies.
+- **Chrome Web Store:** single-purpose statement, a privacy-policy **URL** (use
+  [PRIVACY.md](../PRIVACY.md) once it is on `main`), a justification for each permission, and
+  screenshots at 1280×800. The review also rejects remotely hosted code; LeetSensei ships none
+  and its CSP forbids `eval`.
+- **Firefox Add-ons:** a minified build must be accompanied by the source it was built from.
+  The source is this repository, so submit it — or use `npm run build -- --no-minify` for a
+  readable build.
+- **Both:** the version must be `x.y` or `x.y.z`; the manifest already complies, and it is read
+  from `package.json` at build time.
+- **Store builds differ from development builds:** `npm run release` requires a public OAuth
+  client id and compiles out the personal-access-token path. A release build was verified in
+  Chromium to render zero password fields and never mention personal access tokens.
 
 ## Reporting a compatibility problem
 

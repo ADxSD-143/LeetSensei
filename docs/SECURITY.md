@@ -31,21 +31,36 @@ can slip into the manifest (`tests/unit/manifest-build.test.ts`).
 
 ## GitHub authorization
 
-Two supported paths, both documented in [INSTALLATION.md](INSTALLATION.md):
+**Store builds have exactly one path: the OAuth device flow.** It needs only a public
+`client_id`, which the maintainer injects at build time (`LEETSENSEI_GITHUB_CLIENT_ID`). There
+is no client secret anywhere in the bundle, so nothing confidential can be extracted from it.
+You approve the request in your own browser session at `github.com/login/device`, and
+LeetSensei polls for the token. There is no exchange service, so no third party ever sees a
+token, a submission or any activity.
 
-1. **OAuth device flow (preferred).** Needs only a public `client_id`; there is no client
-   secret anywhere in the bundle, so nothing confidential can be extracted from it. You
-   approve the request in your own browser session at `github.com/login/device`, and
-   LeetSensei polls for the token. There is no exchange service, so no third party ever sees
-   a token, a submission or any activity.
-2. **A fine-grained personal access token you create.** Scoped to the destination
-   repository with `Contents: Read and write` only.
+Development builds additionally accept a **fine-grained personal access token**, which is
+useful when working on the extension without a registered OAuth App. Release builds
+(`npm run release`) compile that path out: `ALLOW_PAT` becomes `false`, the UI renders no token
+field, and the `github/pat-save` message is rejected. Verified in a real browser: a release
+build has **zero** password inputs and never mentions personal access tokens.
 
 **No authorization exchange service exists in this project**, by design: the device flow
 removes the need for one.
 
-Requests request the narrowest scope that can work (`public_repo` by default, `repo` only if
-you point LeetSensei at a private destination, chosen explicitly on the options page).
+### Scope
+
+The first authorization requests `public_repo`. This is the narrowest scope GitHub offers that
+can write to a repository, but be precise about what it means: `public_repo` grants read/write
+to **all of your public repositories**, not only the one you select. LeetSensei only ever
+writes to the destination you chose — that restriction is enforced in the sync engine, not by
+the token — but the token itself is broader. This is a GitHub limitation, and it is disclosed
+in [PRIVACY.md](../PRIVACY.md) and the store listing.
+
+`repo` (read/write on public _and_ private repositories) is requested **only** when you press
+**Allow private repositories**, which is shown when a private destination is needed. It is
+never requested automatically.
+
+The token is never refreshed automatically: if you revoke it, LeetSensei asks you to reconnect.
 
 ## Where secrets live
 
