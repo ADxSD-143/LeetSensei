@@ -1,5 +1,7 @@
 # LeetSensei
 
+<!-- CodeRabbit review test -->
+
 An open-source browser extension that automatically syncs **Accepted** LeetCode submissions to GitHub, organizes them by official topic tag, and tracks revisions.
 
 Built with zero runtime dependencies, no telemetry, and no required paid services.
