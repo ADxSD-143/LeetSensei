@@ -1341,3 +1341,200 @@
     transform: none;
   }
 }
+
+
+/* ------------------------------------------------------------ enemy system */
+/* Append to the end of dashboard.css. Uses only existing theme tokens plus
+   four tier colours defined here. */
+
+:root {
+  --ls-tier-grunt: #7fbe9c;
+  --ls-tier-soldier: #7da4d6;
+  --ls-tier-elite: #b48ad8;
+  --ls-tier-boss: #f07878;
+}
+
+[data-theme='light'] {
+  --ls-tier-grunt: #1f6b4d;
+  --ls-tier-soldier: #2c5f9e;
+  --ls-tier-elite: #6a3fa0;
+  --ls-tier-boss: #a5232f;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --ls-tier-grunt: #1f6b4d;
+    --ls-tier-soldier: #2c5f9e;
+    --ls-tier-elite: #6a3fa0;
+    --ls-tier-boss: #a5232f;
+  }
+}
+
+.ls-quest--grunt {
+  --tier: var(--ls-tier-grunt);
+}
+.ls-quest--soldier {
+  --tier: var(--ls-tier-soldier);
+}
+.ls-quest--elite {
+  --tier: var(--ls-tier-elite);
+}
+.ls-quest--boss {
+  --tier: var(--ls-tier-boss);
+}
+
+/* The tier colour owns the left edge, so enemy rank reads before anything else.
+   Due-state keeps its own signal through the badge and the full border. */
+.ls-quest--grunt,
+.ls-quest--soldier,
+.ls-quest--elite,
+.ls-quest--boss {
+  border-left-color: var(--tier);
+}
+
+.ls-enemy {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ls-enemy__emblem {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--tier);
+  background: color-mix(in srgb, var(--tier) 14%, var(--ls-surface-alt));
+  color: var(--tier);
+  font-family: var(--ls-font-display);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ls-enemy__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ls-enemy__name {
+  font-family: var(--ls-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tier);
+}
+
+/* Toughness bar: how hard the enemy is to land a clean hit on. */
+.ls-toughness {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--ls-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--ls-muted);
+}
+
+.ls-toughness__bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ls-border) 70%, transparent);
+  overflow: hidden;
+}
+
+.ls-toughness__fill {
+  display: block;
+  height: 100%;
+  width: calc(var(--toughness, 0) * 1%);
+  background: var(--tier);
+}
+
+/* Elites carry a faint tier wash; bosses are larger and breathe. */
+.ls-quest--elite {
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--tier) 9%, transparent),
+    transparent 55%
+  );
+}
+
+.ls-quest--boss {
+  grid-column: span 2;
+  padding: 16px 18px;
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--tier) 14%, transparent),
+    transparent 60%
+  );
+  animation: ls-boss-aura 3.6s ease-in-out infinite alternate;
+}
+
+.ls-quest--boss .ls-enemy__emblem {
+  width: 46px;
+  height: 46px;
+  font-size: 24px;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--tier) 45%, transparent);
+}
+
+.ls-quest--boss .ls-quest__title {
+  font-size: 18px;
+}
+
+@keyframes ls-boss-aura {
+  from {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  to {
+    box-shadow: 0 0 22px -4px color-mix(in srgb, var(--tier) 50%, transparent);
+  }
+}
+
+@media (max-width: 680px) {
+  .ls-quest--boss {
+    grid-column: auto;
+  }
+}
+
+/* Katana slash on review: a bright diagonal cut crosses the card as it is rated. */
+.ls-quest::before {
+  content: '';
+  position: absolute;
+  left: -10%;
+  top: 50%;
+  width: 120%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #fff 45%, var(--tier, #fff) 55%, transparent);
+  box-shadow: 0 0 10px var(--tier, #fff);
+  opacity: 0;
+  rotate: -14deg;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.ls-quest.is-completing::before {
+  animation: ls-slash 0.24s ease-out;
+}
+
+@keyframes ls-slash {
+  0% {
+    opacity: 0;
+    transform: translateX(-60%);
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(60%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ls-quest--boss { animation: none !important; }
+  .ls-quest.is-completing::before { animation: none !important; }
+}

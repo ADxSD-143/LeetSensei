@@ -196,6 +196,7 @@ export async function finalizePlan(input: FinalizeInput): Promise<PlanResult> {
     titleSlug: submission.titleSlug,
     url: submission.url,
     difficulty: submission.difficulty,
+    acceptanceRate: submission.acceptanceRate ?? undefined,
     officialTags: submission.tags,
     categories: submission.categories,
     metadataIncomplete: submission.metadataIncomplete,

@@ -4,6 +4,7 @@ import type { DueState } from '../core/schedule';
 import type { RevisionStore } from '../core/revisions';
 import type { PendingJob } from '../storage/repository';
 import { RANKS, XP_BY_RATING } from '../core/progress';
+import { enemyFor } from './enemies';
 import { errorMessage, openPage, send } from '../ui/api';
 import { readOverviewResponse } from '../ui/overview-guard';
 import {
@@ -576,7 +577,10 @@ function questCard(problem: ProblemSummary): HTMLElement {
           ? ' ls-quest--upcoming'
           : '';
 
-  const card = el('article', { className: `ls-quest ls-paper ls-tilt${modifier}` });
+  const enemy = enemyFor({ difficulty: problem.difficulty, officialTags: problem.officialTags });
+  const card = el('article', {
+    className: `ls-quest ls-paper ls-tilt ls-quest--${enemy.tier}${modifier}`,
+  });
 
   const title: HTMLElement =
     problem.url !== ''
@@ -604,11 +608,44 @@ function questCard(problem: ProblemSummary): HTMLElement {
     );
   }
 
+  const enemyRow = el('div', {
+    className: 'ls-enemy',
+    attrs: { 'aria-label': `${enemy.tierLabel}: ${enemy.name}` },
+    children: [
+      el('span', { className: 'ls-enemy__emblem', text: enemy.kanji, attrs: { 'aria-hidden': 'true' } }),
+      el('span', {
+        className: 'ls-enemy__text',
+        children: [
+          el('span', { className: 'ls-enemy__name', text: `${enemy.tierLabel} · ${enemy.name}` }),
+          ...(enemy.toughness === null ? [] : [
+            (() => {
+              const toughness = el('span', {
+                className: 'ls-toughness',
+                attrs: { 'aria-label': `Toughness ${enemy.toughness} percent` },
+                children: [
+                  el('span', { text: 'TOUGHNESS' }),
+                  el('span', {
+                    className: 'ls-toughness__bar',
+                    children: [el('span', { className: 'ls-toughness__fill' })],
+                  }),
+                  el('span', { text: `${enemy.toughness}%` }),
+                ],
+              });
+              toughness.querySelector<HTMLElement>('.ls-toughness__fill')?.style.setProperty('--toughness', String(enemy.toughness));
+              return toughness;
+            })(),
+          ]),
+        ],
+      }),
+    ],
+  });
+
   card.append(
     el('div', {
       className: 'ls-quest__head',
       children: [title, difficultySeal(problem.difficulty)],
     }),
+    enemyRow,
     el('div', { className: 'ls-quest__id', text: `#${problem.problemId} · ${problem.slug}` }),
     el('div', {
       className: 'ls-quest__meta',
